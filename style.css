@@ -1,0 +1,229 @@
+/* 〈以粥養生〉閱讀小誌 — 日系復古手繪生活雜誌風格 */
+:root{
+  --paper:#f6efe1; --paper2:#fbf7ee; --ink:#3f342b; --pencil:#5b4d40; --muted:#857767; --rule:#cdbfa6;
+  --brown:#7b5a3c; --brick:#b5523b; --sage:#8a9a7b; --sage-d:#5f7055; --yellow:#e2bf62; --cream:#fffaf0;
+  --hand:"LXGW WenKai TC","Klee One","Kaiti TC","STKaiti","DFKai-SB",serif;
+  --serif:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --sans:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  color:var(--ink); font-family:var(--sans); line-height:1.75; -webkit-text-size-adjust:100%;
+  background-color:var(--paper);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .34 0 0 0 0 .24 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--brick)}
+.hidden{display:none!important}
+.art{display:block;height:auto;max-width:100%}
+
+/* 頁首：像雜誌的頁眉 */
+.masthead{display:flex;align-items:baseline;gap:14px;max-width:880px;margin:0 auto;padding:16px 22px 8px;border-bottom:1px solid var(--rule)}
+.masthead .brand{font-family:var(--hand);font-size:20px;font-weight:700;letter-spacing:.12em;cursor:pointer}
+.masthead .brand small{font-size:12px;letter-spacing:.2em;color:var(--muted);margin-left:8px;font-weight:400}
+.masthead .sp{flex:1}
+.masthead .who{font-size:13px;color:var(--muted)}
+.chmarks{display:flex;gap:10px;font-family:var(--hand);font-size:16px}
+.chmarks span{position:relative;width:26px;text-align:center;color:var(--muted)}
+.chmarks span.done{color:var(--sage-d)}
+.chmarks span.done::after{content:"✓";position:absolute;right:-6px;top:-8px;font-size:11px;color:var(--brick)}
+.chmarks span.cur{color:var(--ink);font-weight:700}
+.chmarks span.cur::before{content:"";position:absolute;inset:-4px -3px;border:1.6px solid var(--brick);border-radius:50% 45% 52% 48%;transform:rotate(-8deg)}
+
+.page{max-width:880px;margin:0 auto;padding:22px 22px 90px}
+
+/* 文字層級 */
+.kicker{font-size:12.5px;letter-spacing:.28em;color:var(--muted);display:flex;align-items:center;gap:10px}
+.kicker::after{content:"";flex:1;border-top:1px solid var(--rule)}
+.title{font-family:var(--hand);font-weight:700;font-size:clamp(28px,6vw,44px);line-height:1.25;margin:10px 0 6px;letter-spacing:.06em}
+.title .no{display:inline-block;font-size:.5em;vertical-align:middle;border:1.5px solid var(--ink);padding:0 .4em;margin-right:.5em;letter-spacing:.2em;transform:rotate(-2deg)}
+.lead{font-family:var(--serif);font-size:17px;line-height:1.95;max-width:34em;margin:6px 0 16px}
+.note{font-family:var(--hand);color:var(--brick);font-size:16px}
+.small{font-size:13px}
+.muted{color:var(--muted)}
+hr.rule{border:0;border-top:1px solid var(--rule);margin:28px 0}
+
+/* 按鈕：方正、鉛筆框 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:8px 22px;border:1.6px solid var(--ink);background:transparent;cursor:pointer;font-family:var(--hand);font-size:18px;letter-spacing:.08em;border-radius:2px;color:var(--ink);text-decoration:none}
+.btn:hover{background:rgba(91,77,64,.06)}
+.btn.solid{background:var(--ink);color:var(--paper2)}
+.btn.solid:hover{background:#2f261f}
+.btn.brick{background:var(--brick);border-color:var(--brick);color:#fff8ef}
+.btn.sm{min-height:34px;padding:4px 14px;font-size:15px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.textlink{background:none;border:0;padding:0;color:var(--brick);text-decoration:underline;cursor:pointer;font-family:var(--hand);font-size:16px}
+
+/* 封面 */
+.cover{display:grid;grid-template-columns:1fr;gap:10px;padding-top:12px}
+.cover .vol{font-size:12px;letter-spacing:.35em;color:var(--muted)}
+.cover h1{font-family:var(--hand);font-weight:700;font-size:clamp(56px,15vw,104px);line-height:1;margin:6px 0 0;letter-spacing:.08em}
+.cover .sub{font-family:var(--hand);font-size:clamp(20px,4.5vw,28px);letter-spacing:.5em;color:var(--brown);margin-top:4px}
+.cover .by{font-size:13px;color:var(--muted);letter-spacing:.2em}
+.cover .still{width:100%;max-width:680px;margin:6px auto 0}
+.toc{margin:10px 0 22px}
+.toc h3{font-family:var(--hand);font-size:18px;letter-spacing:.4em;margin:0 0 6px;font-weight:700}
+.toc a{display:flex;align-items:baseline;gap:10px;padding:9px 2px;color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--rule);font-size:16px}
+.toc a .k{font-family:var(--hand);font-size:18px;width:3.4em}
+.toc a .t{font-family:var(--hand);font-size:19px}
+.toc a .dots{flex:1}
+.toc a .st{font-size:13px;color:var(--muted)}
+.toc a .st.ok{color:var(--sage-d)}
+.toc a:hover .t{text-decoration:underline;text-decoration-color:var(--brick)}
+.greet{font-family:var(--hand);font-size:18px;margin:4px 0 10px}
+.btnrow{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+
+/* 線索紙片（可剪下的紙條） */
+.tray{display:flex;flex-wrap:wrap;gap:12px 14px;padding:16px 12px 18px;margin:8px 0 18px;border-top:1px dashed var(--rule);border-bottom:1px dashed var(--rule);min-height:76px;position:relative}
+.tray::before{content:"✂ 線索紙片";position:absolute;top:-11px;left:10px;background:var(--paper);padding:0 8px;font-family:var(--hand);font-size:14px;color:var(--muted)}
+.slip{position:relative;background:var(--cream);border:1px dashed #b6a68b;padding:9px 13px 10px;font-size:15.5px;line-height:1.55;max-width:300px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:1px 2px 0 rgba(91,77,64,.12);transition:transform .15s}
+.slip:nth-child(3n){transform:rotate(-1.2deg)} .slip:nth-child(3n+1){transform:rotate(.9deg)} .slip:nth-child(3n+2){transform:rotate(-.4deg)}
+.slip.sel{outline:2px solid var(--brick);outline-offset:3px}
+.slip .para{display:block;font-family:var(--hand);font-size:12.5px;color:var(--sage-d);margin-top:2px}
+.slip .mark{position:absolute;right:-8px;top:-12px;font-family:var(--hand);font-size:22px;color:var(--brick);transform:rotate(-10deg)}
+.slip.locked{cursor:default;opacity:.95}
+.slip.revealed{border-style:solid;border-color:var(--sage)}
+.slip .why{display:block;font-family:var(--hand);font-size:13px;color:var(--brick)}
+.ghost{position:fixed;z-index:80;pointer-events:none;transform:rotate(-3deg) scale(1.03);box-shadow:3px 6px 0 rgba(91,77,64,.18)}
+
+/* 手機：手上的一張紙片（黏在上方） */
+.hand{position:sticky;top:0;z-index:20;background:var(--paper);background-image:inherit;padding:10px 0 8px;margin:6px 0 10px;border-bottom:1px dashed var(--rule)}
+.hand-top{display:flex;justify-content:space-between;font-family:var(--hand);font-size:14px;color:var(--muted);margin-bottom:6px}
+.hand-row{display:grid;grid-template-columns:38px 1fr 38px;gap:8px;align-items:center;margin-bottom:8px}
+@media (max-width:620px){.zone .drop .slip{font-size:13px;padding:6px 7px}}
+.hand .slip.inhand{max-width:none;transform:rotate(-.6deg);font-size:16.5px;cursor:default;outline:2px solid var(--brick);outline-offset:3px}
+.hbtn{height:46px;border:1.4px solid var(--ink);background:transparent;font-size:26px;line-height:1;cursor:pointer;font-family:var(--hand)}
+.hbtn:disabled{opacity:.3}
+/* 桌面上的碗（放置區） */
+.tablezone{position:relative;margin-top:6px}
+.bowls{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:start}
+.bowls.two{grid-template-columns:repeat(2,1fr)}
+.zone{display:flex;flex-direction:column;align-items:center;text-align:center;min-height:120px;padding:4px 2px 10px;position:relative}
+.zone .who{width:74px;margin-bottom:-6px}
+.zone .bowlart{width:100%;max-width:170px}
+.zone .zlabel{font-family:var(--hand);font-size:19px;font-weight:700;margin-top:-6px;letter-spacing:.05em}
+.zone .znote{font-size:12px;color:var(--muted);margin-bottom:6px}
+.zone .drop{width:100%;min-height:64px;display:flex;flex-direction:column;gap:8px;padding:8px 4px;border:1.5px dashed transparent;align-items:center}
+.zone.over .drop,.zone.target .drop{border-color:var(--brick);background:rgba(181,82,59,.04)}
+.zone .drop .slip{max-width:100%;font-size:14px;padding:7px 9px}
+.table-art{width:100%;margin-top:-4px}
+.zone .zstamp{width:60px}
+
+/* 起承轉合 欄位 */
+.slots{display:grid;gap:12px;margin:8px 0}
+.slotrow{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:center;border-bottom:1px solid var(--rule);padding:8px 0}
+.slotrow .lab{font-family:var(--hand);font-size:40px;font-weight:700;line-height:1;text-align:center}
+.slotrow .lab small{display:block;font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0;margin-top:4px;font-family:var(--sans)}
+.slotrow .drop{min-height:58px;border:1.5px dashed var(--rule);display:flex;align-items:center;padding:6px}
+.slotrow.over .drop,.slotrow.target .drop{border-color:var(--brick)}
+.slotrow .drop .slip{max-width:100%;transform:none}
+
+/* 排序（筆記本橫線） */
+.order{list-style:none;margin:8px 0;padding:0;counter-reset:o}
+.order li{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule)}
+.order li .n{font-family:var(--hand);font-size:22px;text-align:center;color:var(--brown)}
+.order li .slip{max-width:none;transform:none!important;cursor:grab}
+.order li .mv{display:flex;flex-direction:column;gap:4px}
+.order li .mv button{width:34px;height:28px;border:1px solid var(--rule);background:var(--cream);cursor:pointer;font-size:14px;line-height:1}
+.order li.dragging{opacity:.35}
+
+/* 填空、想法（像在小誌上寫字） */
+.write{margin:18px 0;padding:14px 0 6px;border-top:1px solid var(--rule)}
+.write .q{font-family:var(--serif);font-size:16.5px;margin-bottom:8px}
+.write input.line{border:0;border-bottom:1.6px solid var(--pencil);background:transparent;font-family:var(--hand);font-size:22px;width:6em;text-align:center;padding:0 4px;margin:0 6px}
+.write textarea{width:100%;min-height:96px;border:0;background:repeating-linear-gradient(transparent,transparent 33px,var(--rule) 34px);line-height:34px;font-family:var(--hand);font-size:19px;padding:0 4px;resize:vertical}
+.write textarea:focus,.write input:focus{outline:none;background-color:rgba(226,191,98,.08)}
+.feedback{font-family:var(--hand);font-size:17px;color:var(--brick);margin:8px 0;min-height:1.6em}
+.feedback.good{color:var(--sage-d)}
+
+.actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:16px 0}
+.pending{font-family:var(--hand);color:var(--muted)}
+.bigstamp{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%) rotate(-12deg) scale(.6);opacity:0;z-index:90;pointer-events:none;transition:all .35s cubic-bezier(.2,1.4,.4,1)}
+.bigstamp.on{opacity:.95;transform:translate(-50%,-50%) rotate(-12deg) scale(1)}
+.bigstamp .art{width:150px}
+
+/* 登記（像一張借書卡） */
+.mask{position:fixed;inset:0;background:rgba(63,52,43,.35);display:flex;align-items:center;justify-content:center;padding:16px;z-index:70}
+.card{background:var(--paper2);width:100%;max-width:400px;padding:22px 22px 18px;border:1.5px solid var(--ink);box-shadow:4px 5px 0 rgba(63,52,43,.18)}
+.card h2{font-family:var(--hand);font-size:24px;margin:0 0 4px;letter-spacing:.1em}
+.card label{display:block;font-family:var(--hand);font-size:16px;margin:12px 0 0}
+.card input{width:100%;border:0;border-bottom:1.5px solid var(--pencil);background:transparent;font-size:18px;padding:6px 2px}
+.card input:focus{outline:none;border-color:var(--brick)}
+.err{color:var(--brick);font-size:14px;min-height:1.4em;margin-top:8px}
+
+/* 讀書手帖（報告書） */
+.report .head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:8px}
+.report .head h2{font-family:var(--hand);font-size:34px;margin:0;letter-spacing:.15em}
+.report .meta{font-size:14px;color:var(--muted);text-align:right}
+.rchap{display:grid;grid-template-columns:64px 1fr 70px;gap:12px;align-items:center;padding:12px 0;border-bottom:1px dotted var(--rule)}
+.rchap .k{font-family:var(--hand);font-size:34px;text-align:center}
+.rchap .t{font-family:var(--hand);font-size:19px}
+.rchap .d{font-size:13.5px;color:var(--muted)}
+.rchap .art{width:62px}
+.rsec h3{font-family:var(--hand);font-size:20px;letter-spacing:.2em;margin:22px 0 6px}
+.rsec ul{margin:0;padding-left:1.3em}
+.rsec li{margin:4px 0}
+.rquote{font-family:var(--hand);font-size:17px;border-left:3px solid var(--rule);padding:4px 12px;margin:6px 0;white-space:pre-wrap}
+.dotbar{display:inline-flex;gap:4px;vertical-align:middle}
+.dotbar i{width:11px;height:11px;border:1.4px solid var(--brown);border-radius:50%}
+.dotbar i.on{background:var(--brown)}
+
+/* 老師頁 */
+.tabs{display:flex;gap:0;overflow-x:auto;border-bottom:1.5px solid var(--ink);margin:14px 0}
+.tabs button{border:0;background:none;padding:8px 14px;cursor:pointer;font-family:var(--hand);font-size:17px;white-space:nowrap;color:var(--muted)}
+.tabs button.on{color:var(--ink);font-weight:700;box-shadow:inset 0 -3px 0 var(--brick)}
+table.tb{width:100%;border-collapse:collapse;font-size:14px}
+.tb th,.tb td{border-bottom:1px solid var(--rule);padding:7px 8px;text-align:left;vertical-align:top}
+.tb th{font-family:var(--hand);font-size:15px;font-weight:700;background:rgba(205,191,166,.25);white-space:nowrap}
+.tb tr.sus td{background:rgba(226,191,98,.18)}
+.scroll{overflow:auto;max-height:70vh}
+.hbar{display:grid;grid-template-columns:150px 1fr 60px;gap:10px;align-items:center;margin:8px 0;font-size:14.5px}
+.hbar .bar{height:12px;background:rgba(205,191,166,.4)}
+.hbar .bar b{display:block;height:100%;background:var(--brown)}
+.stat{display:inline-block;margin:0 22px 10px 0}
+.stat .n{font-family:var(--hand);font-size:34px;font-weight:700;line-height:1.1}
+.stat .l{font-size:13px;color:var(--muted)}
+.box{border:1px solid var(--rule);background:rgba(255,250,240,.6);padding:14px 16px;margin:12px 0}
+.box h3{font-family:var(--hand);font-size:19px;margin:0 0 8px}
+.tag{display:inline-block;font-family:var(--hand);font-size:13px;border:1px solid var(--brick);color:var(--brick);padding:0 6px;margin-left:4px;transform:rotate(-2deg)}
+.tag.sage{border-color:var(--sage-d);color:var(--sage-d)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--paper2);padding:9px 18px;font-family:var(--hand);font-size:16px;z-index:95}
+
+/* 大屏（淺色紙底） */
+body.screen .masthead{display:none}
+#pg-screen{padding:3vh 4vw;min-height:100vh}
+.sc-h{display:flex;align-items:flex-end;gap:2vw}
+.sc-h h1{font-family:var(--hand);font-size:min(5vw,8vh);margin:0;letter-spacing:.08em}
+.sc-h .sub{font-family:var(--hand);font-size:min(2vw,3.4vh);color:var(--brown)}
+.sc-grid{display:grid;grid-template-columns:1fr 1fr;gap:3vw;margin-top:2.5vh}
+.sc-box{border-top:2px solid var(--ink);padding-top:1.5vh}
+.sc-box h3{font-family:var(--hand);font-size:min(2.4vw,4vh);margin:0 0 1.5vh}
+.sc-row{display:grid;grid-template-columns:min(15vw,24vh) 1fr min(7vw,11vh);gap:1.2vw;align-items:center;margin:1.3vh 0;font-family:var(--hand);font-size:min(2.1vw,3.6vh)}
+.sc-bar{height:3vh;background:rgba(205,191,166,.45)}
+.sc-bar b{display:block;height:100%}
+.seats{display:grid;grid-template-columns:repeat(8,1fr);gap:.7vw}
+.seats div{height:min(5vw,7.6vh);border:1.5px solid var(--rule);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--hand);font-size:min(1.9vw,3.2vh);font-weight:700;color:#b8aa94}
+.seats div.on{border-color:var(--ink);color:var(--ink);background:var(--cream)}
+.seats div .dots{display:flex;gap:2px;margin-top:2px}
+.seats div .dots i{width:min(.7vw,1.1vh);height:min(.7vw,1.1vh);border-radius:50%;background:#ddd2bf}
+.seats div .dots i.on{background:var(--brick)}
+
+@media (max-width:620px){
+  .masthead{padding:12px 14px 6px;flex-wrap:wrap}
+  .page{padding:16px 14px 80px}
+  .zone .who{width:56px}
+  .zone .zlabel{font-size:16px}
+  .slip{font-size:15px;max-width:100%}
+  .tray{gap:10px}
+  .slotrow{grid-template-columns:56px 1fr}
+  .slotrow .lab{font-size:32px}
+  .hbar{grid-template-columns:96px 1fr 50px}
+  .rchap{grid-template-columns:44px 1fr 56px}
+}
+@media print{
+  body{background:#fff}
+  .masthead,.noprint,.btn,.tabs{display:none!important}
+  .page{padding:0;max-width:none}
+  .report{font-size:12pt}
+}
+.hand.empty{position:static;border-bottom:0;padding:4px 0}
