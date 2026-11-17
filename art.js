@@ -199,8 +199,8 @@
     A.seedFor(who + "face");
     const W = 120, H = 140, cx = 60;
     let b = "";
-    const cloth = { dad: "#9fae92", mom: "#d39a86", ama: "#d6b675" }[who];
-    const clothLine = { dad: C.sageDark, mom: C.brick, ama: C.brown }[who];
+    const cloth = { dad: "#9fae92", mom: "#d39a86", ama: "#d6b675", me: "#c9b48a", husband: "#a9a28f" }[who];
+    const clothLine = { dad: C.sageDark, mom: C.brick, ama: C.brown, me: C.brown, husband: C.ink }[who];
     // 肩膀與衣服
     const shD = `M10,140 Q14,108 40,100 L80,100 Q106,108 110,140Z`;
     b += A.scribble(shD, [8, 96, 104, 46], { c: cloth, gap: 3, op: .6 });
@@ -218,6 +218,15 @@
       const hD = `M33,58 Q32,30 60,28 Q88,30 87,58 Q84,44 72,40 Q58,44 44,40 Q36,46 33,58Z`;
       b += A.scribble(hD, [30, 24, 60, 36], { c: "#4a3a2e", gap: 1.9, op: .85, ang: 70 });
       b += A.curve([[33, 58], [33, 36], [60, 27], [87, 36], [87, 58]], { c: C.dark, w: 1.3 });
+    } else if(who === "me"){ // 作者：齊肩短髮
+      const hD = `M32,80 Q26,36 60,28 Q94,36 88,80 Q84,62 84,52 Q74,44 56,44 Q42,46 36,54 Q36,66 32,80Z`;
+      b += A.scribble(hD, [24, 24, 72, 58], { c: "#3f2f26", gap: 1.9, op: .85, ang: 65 });
+      b += A.curve([[32, 80], [27, 46], [60, 27], [93, 46], [88, 80]], { c: C.dark, w: 1.3 });
+    } else if(who === "husband"){ // 丈夫：淺棕短髮、短鬍子
+      const hD = `M34,56 Q33,30 60,27 Q87,30 86,56 Q82,42 66,38 Q50,42 40,44 Q36,48 34,56Z`;
+      b += A.scribble(hD, [30, 24, 60, 34], { c: "#b08a63", gap: 2, op: .85, ang: 70 });
+      b += A.curve([[34, 56], [34, 34], [60, 26], [86, 34], [86, 56]], { c: C.brown, w: 1.3 });
+      b += A.scribble(`M40,70 Q42,90 60,92 Q78,90 80,70 Q72,84 60,84 Q48,84 40,70Z`, [38, 68, 44, 26], { c: "#b08a63", gap: 1.8, op: .7, ang: 80 });
     } else if(who === "mom"){
       const hD = `M30,86 Q24,40 60,28 Q96,40 90,86 Q86,70 85,56 Q76,40 60,42 Q44,44 36,56 Q34,72 30,86Z`;
       b += A.scribble(hD, [22, 24, 76, 64], { c: "#3f2f26", gap: 1.9, op: .85, ang: 75 });
@@ -240,8 +249,8 @@
     if(who === "dad"){ b += A.ell(50, ey, 7, 5.5, { c: C.ink, w: 1, times: 1 }) + A.ell(70, ey, 7, 5.5, { c: C.ink, w: 1, times: 1 }) + A.line(57, ey, 63, ey, { c: C.ink, w: 1 }); }
     b += A.curve([[60, 64], [58, 72], [61, 74]], { c: C.brown, w: 1.1 });
     b += A.curve([[53, 81], [60, 83], [67, 81]], { c: C.brick, w: 1.3 });
-    if(who !== "dad"){ b += A.scribble(ellD(45, 74, 5, 3), [40, 71, 10, 6], { c: C.blush, gap: 1.6, op: .4 }) + A.scribble(ellD(75, 74, 5, 3), [70, 71, 10, 6], { c: C.blush, gap: 1.6, op: .4 }); }
-    return A.svg(W, H, b, Object.assign({ label: { dad: "爸爸", mom: "媽媽", ama: "阿媽" }[who] }, o));
+    if(who !== "dad" && who !== "husband"){ b += A.scribble(ellD(45, 74, 5, 3), [40, 71, 10, 6], { c: C.blush, gap: 1.6, op: .4 }) + A.scribble(ellD(75, 74, 5, 3), [70, 71, 10, 6], { c: C.blush, gap: 1.6, op: .4 }); }
+    return A.svg(W, H, b, Object.assign({ label: { dad: "爸爸", mom: "媽媽", ama: "阿媽", me: "作者", husband: "丈夫" }[who] }, o));
   };
 
   /* ---------- 靜物（主畫面插圖） ---------- */
@@ -271,6 +280,16 @@
   A.circleMark = (o = {}) => { A.seedFor("circle" + (o.k || "")); return A.svg(100, 60, A.ell(50, 30, 46, 25, { c: o.c || C.brick, w: 2, over: .5 }), Object.assign({ cls: "circlemark", size: false }, o)); };
   A.underline = (w = 200, o = {}) => { A.seedFor("ul" + w); return A.svg(w, 10, A.curve([[2, 6], [w * .3, 4], [w * .7, 7], [w - 2, 4]], { c: o.c || C.brick, w: 2, times: 2 }), Object.assign({ cls: "ul", size: false }, o)); };
   A.leaf = (o = {}) => { A.seedFor("leaf"); let b = A.curve([[10, 40], [20, 20], [40, 8]], { c: C.sageDark, w: 1.3 }); b += A.ell(28, 22, 12, 6, { c: C.sageDark, w: 1.1, times: 1 }); b += A.scribble(ellD(28, 22, 12, 6), [16, 16, 24, 12], { c: C.sage, gap: 2, op: .5 }); return A.svg(50, 50, b, Object.assign({ label: "" }, o)); };
+
+  // 串起人物的一道粥香（波浪線＋小圓章「粥」）
+  A.zhouLink = (o = {}) => {
+    A.seedFor("zlink" + (o.k || ""));
+    let b = A.curve([[4, 40], [24, 30], [44, 46], [64, 32], [84, 44], [104, 34], [116, 40]], { c: C.brick, w: 1.6, times: 2 });
+    b += A.ell(60, 39, 21, 21, { c: C.brick, w: 1.8 });
+    b += A.scribble(ellD(60, 39, 21, 21), [39, 18, 42, 42], { c: "#f3ead6", gap: 1.4, op: 1 });
+    b += `<text x="60" y="48" text-anchor="middle" font-size="25" font-weight="700" fill="${C.brick}" font-family="LXGW WenKai TC, serif">粥</text>`;
+    return A.svg(120, 80, b, Object.assign({ size: false, cls: "zlink", label: "粥" }, o));
+  };
 
   // 雙圓圈（文氏圖）：左＝爸爸（灰綠），右＝媽媽和阿媽（磚紅）
   A.venn = (o = {}) => {

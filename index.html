@@ -6,10 +6,10 @@
 <title>以粥養生・閱讀小誌</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=6"></script>
-<script src="art.js?v=2"></script>
+<script src="content.js?v=7"></script>
+<script src="art.js?v=4"></script>
 </head>
 <body>
 <header class="masthead noprint" id="masthead">
@@ -208,8 +208,8 @@ function renderCh(no){
   let h = `<div class="kicker">第${c.kanji}話　${esc(c.kicker)}</div>
     <h1 class="title"><span class="no">${c.kanji}</span>${esc(c.title)}</h1>
     <p class="lead">${esc(c.lead)}</p>`;
-  if(sess.mode === "support" && (no === 1 || no === 2)) h += `<p class="note">✎ 先自己放放看。交出去之後，還沒放對的紙片會標出段落，幫你回課文找。</p>`;
-  if(sess.mode === "challenge") h += `<p class="note">✎ 小老師任務：這次沒有段落提示，挑戰一次就放對！</p>`;
+  if(sess.mode === "support" && no === 1) h += `<p class="note">✎ 先自己放放看。交出去之後，還沒放對的紙片會標出段落，幫你回課文找。</p>`;
+  if(sess.mode === "challenge" && c.kind !== "write") h += `<p class="note">✎ 小老師任務：這次沒有段落提示，挑戰一次就放對！</p>`;
   if(!API) h += `<p class="note">※ 本機模式：還沒設定後端，可以看看版面，但不能批改。</p>`;
   h += `<div id="work"></div><div class="feedback" id="fb"></div><div class="actions" id="acts"></div><div id="after"></div>`;
   $("#pg-ch").innerHTML = h;
@@ -221,6 +221,7 @@ function renderCh(no){
 function renderWork(no){
   const c = CH[no], l = L(no), w = $("#work");
   if(c.kind === "order") return renderOrder(no);
+  if(c.kind === "write"){ if(!l.done && l.tries.some(Array.isArray)){ l.tries = []; l.firstRight = null; } l.cardsDone = true; w.innerHTML = sceneHTML(c); $("#acts").innerHTML = ""; return; }
   const inTray = c.cards.filter(k => !l.place[k.id]);
   const compact = window.innerWidth < 700;
   let h = "";
@@ -357,6 +358,52 @@ async function doCheck(no){
 
 function stamp(t){ const b = $("#bigstamp"); b.innerHTML = Art.stamp(t, { width:150 }); b.classList.add("on"); setTimeout(() => b.classList.remove("on"), 1300); }
 
+/* 第二話：人物串連圖（丈夫 ← 作者 → 小時候的爸媽，中間用粥串起） */
+function sceneHTML(c){
+  const fig = (x, cls) => `<figure class="s2fig ${cls}"><div class="s2who">${x.who.map(w => Art.portrait(w, { size:false })).join("")}</div>
+    <div class="s2bowl">${cls === "right" ? Art.spoon({ size:false }) : Art.bowl("plain", { size:false })}</div><figcaption><b>${esc(x.t)}</b><span>${esc(x.s)}</span></figcaption></figure>`;
+  return `<div class="scene2">${fig(c.scene.left, "left")}<div class="s2link">${Art.zhouLink({ k:"l" })}</div>${fig(c.scene.center, "center")}<div class="s2link">${Art.zhouLink({ k:"r" })}</div>${fig(c.scene.right, "right")}</div>`;
+}
+/* 書寫題組：先交 → 有錯才給提示 → 改過再交 → 參考筆記 */
+function writeHTML(c, l){
+  l.w = l.w || {}; l.wfb = l.wfb || {};
+  const ro = l.wref || l.done ? "disabled" : "";
+  let h = c.qs.map((q, i) => { const f = l.wfb[q.k];
+    return `<div class="write"><div class="q">${i + 1}. ${esc(q.q)}</div>
+      <textarea data-w="${q.k}" maxlength="300" placeholder="${esc(q.ph)}" ${ro}>${esc(l.w[q.k] || "")}</textarea>
+      ${f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""}
+      ${l.wtried && !l.wref && f && !f.good ? `<div class="ihint">✎ ${esc(q.hint)}</div>` : ""}
+      ${l.wref && l.wref[q.k] ? `<div class="rquote">✎ 參考筆記：${esc(l.wref[q.k])}</div>` : ""}</div>`; }).join("");
+  if(l.wref && l.wref.note) h += `<p class="note">✎ ${esc(l.wref.note)}</p>`;
+  if(!l.done) h += `<div class="feedback" id="wMsg">${l.wtried && !l.wref ? "看看每一題的提醒和提示，改一改再交一次。" : ""}</div><div class="actions">${l.wref ? `<button class="btn solid" id="wDone">看完了，完成第${c.kanji}話</button>` : `<button class="btn brick" id="wBtn">${l.wtried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>`}</div>`;
+  return h;
+}
+function bindWrite(c, l, no){
+  const read = () => { document.querySelectorAll("[data-w]").forEach(t => l.w[t.dataset.w] = t.value.trim()); saveLocal(); };
+  document.querySelectorAll("[data-w]").forEach(t => t.addEventListener("input", read));
+  const b = $("#wBtn");
+  if(b) b.onclick = async () => {
+    read();
+    if(c.qs.some(q => (l.w[q.k] || "").length < 4)){ $("#wMsg").textContent = "每一題都寫一兩句，再交一次。"; return; }
+    const res = {};
+    c.qs.forEach(q => { const ok = q.good.test(l.w[q.k]); res[q.k] = ok ? "1" : "0"; l.wfb[q.k] = ok ? { good:true, t:"✓ 有說到重點" } : { good:false, t:q.bad }; });
+    l.tries.push(res);
+    if(l.tries.length === 1) l.firstRight = Object.values(res).filter(v => v === "1").length;
+    const anyBad = Object.values(res).includes("0");
+    if(anyBad && !l.wtried){ l.wtried = true; l.hints++; saveLocal(); renderAfter(no); return; }
+    b.disabled = true;
+    try{
+      const r = await api({ action:"check", set:"c" + no + "w", written:l.w });
+      if(!r.ok && r.error === "沒有這一題") l.wref = { note:"（老師還沒放上這題的參考筆記，可以先完成這一話。）" };
+      else if(!r.ok){ $("#wMsg").textContent = r.error || "讀取參考筆記失敗"; b.disabled = false; return; }
+      else l.wref = r.ref || { note:"" };
+    }catch(e){ $("#wMsg").textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
+    if(!anyBad) stamp(l.tries.length === 1 ? "好" : "很好");
+    saveLocal(); renderAfter(no);
+  };
+  const d = $("#wDone"); if(d) d.onclick = () => { read(); finishLevel(no); renderAfter(no); };
+}
+
 /* 卡片完成之後：填空／寫想法／下一話 */
 function renderAfter(no){
   const c = CH[no], l = L(no), el = $("#after");
@@ -367,6 +414,8 @@ function renderAfter(no){
       <div class="q">${esc(c.fill.before)}<input class="line" id="fillIn" maxlength="6" value="${esc(l.fill)}" ${l.fillDone ? "disabled" : ""}>${esc(c.fill.after)}</div>
             <div class="feedback ${l.fillDone ? "good" : ""}" id="fillFb">${l.fillDone ? (l.fillOk ? "✓ 對，甜的、鹹的都喜歡。" : `答案是「${esc(l.fillReveal || "甜鹹")}」：甜的、鹹的都喜歡。`) : ""}</div>
       ${l.fillDone ? "" : `<button class="btn sm" id="fillBtn">寫好了</button>`}</div>`;
+  } else if(c.kind === "write"){
+    h += writeHTML(c, l);
   } else {
     h += `<div class="write"><div class="q">${esc(c.reflect.q)}</div>
       <textarea id="refIn" maxlength="300" placeholder="用自己的話寫一兩句" ${l.done || l.refDone ? "disabled" : ""}>${esc(l.reflect)}</textarea>
@@ -382,6 +431,7 @@ function renderAfter(no){
   el.innerHTML = h;
   if(no === 1 && l.fillDone) bindInduce(l);
   if(c.deep && l.refDone) bindDeep(c, l, no);
+  if(c.kind === "write") bindWrite(c, l, no);
   const fb = $("#fillBtn");
   if(fb) fb.onclick = async () => {
     const v = $("#fillIn").value.trim(); if(!v) return;
@@ -561,7 +611,8 @@ function textsOf(no, l){
       if(d.tv && d.tv.both) t["雙圓圈 共通點"] = d.tv.both;
       if(d.tw && d.tw.why) t["為什麼有差異"] = d.tw.why;
     }
-  } else { if(l.reflect) t["想法"] = l.reflect; if(l.deep) t["深度思考"] = l.deep; }
+  } else if(CH[no].kind === "write"){ CH[no].qs.forEach(q => { if(l.w && l.w[q.k]) t[q.q] = l.w[q.k]; }); }
+  else { if(l.reflect) t["想法"] = l.reflect; if(l.deep) t["深度思考"] = l.deep; }
   return t;
 }
 const textsFor = (s, no) => { const l = s.levels && s.levels[no]; if(!l) return {}; return l.texts || textsOf(no, l); };
@@ -580,13 +631,13 @@ async function pushSave(){
 }
 
 /* ================= 讀書手帖（報告書） ================= */
-const SKILL = { 1:"分清楚三碗粥各是誰的、怎麼吃", 2:"理清事情的先後，並連到作者的心情", 3:"看出文章怎樣從一個人走向一個文化", 4:"判斷證據夠不夠支持一個說法" };
+const SKILL = { 1:"分清楚三碗粥各是誰的、怎麼吃", 2:"用一碗粥串起人物，推論他們的心意", 3:"看出文章怎樣從一個人走向一個文化", 4:"判斷證據夠不夠支持一個說法" };
 const LAYER = ["找訊息", "找訊息", "推論", "詮釋整合", "比較評估"];
 function gradeOf(s, no){
   const g = s.graded && s.graded[no];
   if(g) return g;
   const l = s.levels[no]; if(!l || !l.tries || !l.tries.length) return null;
-  const c = CH[no], tot = c.cards.length;
+  const c = CH[no], tot = c.kind === "write" ? c.qs.length : c.cards.length;
   return { first: l.firstRight == null ? 0 : l.firstRight, total: tot, tries: l.tries.length, solvedAt: l.cardsDone && !Object.keys(l.revealed || {}).length ? l.tries.length : 0 };
 }
 function reportHTML(s, stu, opt = {}){
@@ -595,7 +646,7 @@ function reportHTML(s, stu, opt = {}){
     if(!l || !l.done || !g) return `<div class="rchap"><div class="k">${c.kanji}</div><div><div class="t">${esc(c.title)}</div><div class="d">還沒讀完</div></div><div></div></div>`;
     const r = g.first / g.total, st = r === 1 ? "好" : r >= .7 ? "很好" : g.solvedAt ? "加油" : "再讀";
     return `<div class="rchap"><div class="k">${c.kanji}</div><div><div class="t">${esc(c.title)}</div>
-      <div class="d">第一次就放對 <b>${g.first}</b>／${g.total}　<span class="dotbar">${Array.from({ length:g.total }, (_, i) => `<i class="${i < g.first ? "on" : ""}"></i>`).join("")}</span></div>
+      <div class="d">${c.kind === "write" ? "第一次就寫到重點" : "第一次就放對"} <b>${g.first}</b>／${g.total}　<span class="dotbar">${Array.from({ length:g.total }, (_, i) => `<i class="${i < g.first ? "on" : ""}"></i>`).join("")}</span></div>
       <div class="d">試了 ${g.tries} 次${g.solvedAt ? "，自己完成" : "，老師幫忙放好"}・${fmtDur(l.dur)}${l.hints ? `・看了提示 ${l.hints} 次` : ""}</div></div>
       <div>${Art.stamp(st, { width:62, c: r >= .7 ? "#b5523b" : "#7b5a3c" })}</div></div>`;
   }).join("");
@@ -607,7 +658,7 @@ function reportHTML(s, stu, opt = {}){
   if(p != null){
     const g1 = gradeOf(s, 1), g2 = gradeOf(s, 2);
     if(p <= 1 && g1 && g1.first / g1.total >= .75) cmp = `前測時，「找訊息」還在練習；這次第一話第一次就放對 ${g1.first} 張，進步很明顯！`;
-    else if(p <= 1 && g2 && g2.first / g2.total >= .67) cmp = `前測時，「推論」還在練習；這次事件排序第一次就排對 ${g2.first} 件，很棒！`;
+    else if(p <= 1 && g2 && g2.first / g2.total >= .67) cmp = `前測時，「推論」還在練習；這次第二話第一次就寫到 ${g2.first} 題重點，很棒！`;
     else if(p >= 4) cmp = "前測時你就很穩，這次也可以當同學的小老師，幫忙說明你是怎麼判斷的。";
     else cmp = `前測時，你停在「${LAYER[Math.min(4, p + 1)]}」這一層；這本小誌就是幫你練這一步。`;
   }
@@ -711,6 +762,13 @@ function tItems(el, rows){
   Z.chapters.forEach(c => {
     const ans = A.sets ? A.sets[(A.grade || {})[c.no]] : A[c.no]; if(!ans) return;
     const ts = S.map(s => s.levels && s.levels[c.no] && s.levels[c.no].tries && s.levels[c.no].tries[0]).filter(Boolean);
+    if(c.kind === "write"){
+      const tw = ts.filter(t => !Array.isArray(t));
+      h += `<div class="box"><h3>第${c.kanji}話　${esc(c.title)}（${tw.length} 人）</h3><table class="tb"><tr><th>題目</th><th>第一次就寫到重點</th></tr>` +
+        c.qs.map(q => { const p = pct(tw.filter(t => t[q.k] === "1").length, tw.length); return `<tr><td>${esc(q.q)}</td><td><b style="color:${p < 60 ? "var(--brick)" : "var(--sage-d)"}">${p}%</b></td></tr>`; }).join("") +
+        `</table><p class="small muted">「寫到重點」是用關鍵詞初步判斷，實際內容請到「文字回答」看。</p></div>`;
+      return;
+    }
     h += `<div class="box"><h3>第${c.kanji}話　${esc(c.title)}（${ts.length} 人）</h3><div class="scroll"><table class="tb"><tr><th>紙片</th><th>正確位置</th><th>第一次放對</th><th>最常放錯到</th></tr>`;
     const zl = {}; (c.zones || []).forEach(z => zl[z.id] = z.label);
     c.cards.slice().sort((a,b) => c.kind === "order" ? ans.order.indexOf(a.id) - ans.order.indexOf(b.id) : 0).forEach(k => {
@@ -754,10 +812,10 @@ function tTexts(el, rows){
     const keys = []; S.forEach(({ s }) => Object.keys(textsFor(s, c.no)).forEach(k => { if(!keys.includes(k)) keys.push(k); }));
     h += `<div class="box"><h3>第${c.kanji}話　${esc(c.title)}</h3>`;
     if(!keys.length){ h += `<p class="small muted">還沒有。</p></div>`; return; }
-    if(c.no > 1) h += `<p class="small muted">題目：${esc(c.reflect.q)}</p>`;
+    if(c.reflect) h += `<p class="small muted">題目：${esc(c.reflect.q)}</p>`;
     h += `<div class="scroll"><table class="tb"><tr><th>座號</th><th>姓名</th>${keys.map(k => `<th>${esc(k)}</th>`).join("")}</tr>` +
       S.map(({ r, s }) => { const t = textsFor(s, c.no); if(!Object.keys(t).length) return "";
-        const tag = c.no > 1 && t["想法"] ? (c.reflect.good.filter(w => t["想法"].includes(w)).length >= 2 ? ` <span class="tag sage">有連回課文</span>` : ` <span class="tag">可再追問</span>`) : "";
+        const tag = c.reflect && t["想法"] ? (c.reflect.good.filter(w => t["想法"].includes(w)).length >= 2 ? ` <span class="tag sage">有連回課文</span>` : ` <span class="tag">可再追問</span>`) : "";
         return `<tr><td>${esc(r.seat)}</td><td>${esc(r.name)}${tag}</td>${keys.map(k => `<td class="small">${esc(t[k] || "")}</td>`).join("")}</tr>`; }).join("") + `</table></div></div>`;
   });
   el.innerHTML = h;
@@ -794,7 +852,11 @@ function tPreview(el){
     h += `<div class="box"><div class="btnrow" style="justify-content:space-between"><h3 style="margin:0">第${c.kanji}話　${esc(c.title)}</h3>
       <span><button class="btn sm solid" data-prev="${c.no}">試做這一話</button> <button class="textlink" data-prevnew="${c.no}">從頭試做</button></span></div>
       <p class="small muted" style="margin:4px 0">${esc(c.kicker)}｜${esc(c.lead)}</p>`;
-    if(c.kind === "order"){
+    if(c.kind === "write"){
+      const ref = set.ref || {};
+      h += `<p class="small muted">畫面：左＝${esc(c.scene.left.t)}（${esc(c.scene.left.s)}）；中＝${esc(c.scene.center.t)}；右＝${esc(c.scene.right.t)}（${esc(c.scene.right.s)}），用「粥」串起來。</p>` +
+        li(c.qs.map((q, i) => `<b>${i + 1}. ${esc(q.q)}</b><br><span class="small muted">寫錯時的提醒：${esc(q.bad)}<br>提示（交過有錯才出現）：${esc(q.hint)}</span><br><span class="small">參考：${esc(ref[q.k] || "（後端還沒有這題，請貼更新代碼）")}</span>`));
+    } else if(c.kind === "order"){
       const ord = set.order || [], byId = {}; c.cards.forEach(k => byId[k.id] = k);
       h += `<p class="small"><b>正確順序</b>（學生看到的是打亂的）</p><ol>${ord.map(id => `<li>${esc(byId[id] ? byId[id].t : id)} <span class="small muted">${esc((set.para || {})[id] || "")}</span></li>`).join("")}</ol>`;
     } else {

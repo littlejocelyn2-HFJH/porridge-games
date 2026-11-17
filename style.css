@@ -331,3 +331,27 @@ body.screen .masthead{display:none}
   .venn2 .vboth{min-height:90px}
 }
 @media (max-width:700px){ .vref{grid-template-columns:1fr} }
+
+/* 第二話：人物串連圖 */
+.scene2{display:flex;align-items:flex-end;justify-content:center;gap:0;margin:18px 0 10px;padding:10px 0 6px;border-top:1px dashed var(--rule);border-bottom:1px dashed var(--rule)}
+.s2fig{margin:0;flex:1 1 0;max-width:230px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.s2fig .s2who{display:flex;justify-content:center;width:100%}
+.s2fig .s2who svg{width:92px;flex:0 0 92px}
+.s2fig .s2who svg+svg{margin-left:-14px}
+.s2fig.center .s2who svg{width:112px;flex-basis:112px}
+.s2fig .s2bowl{width:96px;margin-top:-6px}
+.s2fig.right .s2bowl{width:84px;margin-top:4px}
+.s2fig .s2bowl svg{width:100%;display:block}
+.s2fig figcaption{margin-top:6px;font-family:var(--hand)}
+.s2fig figcaption b{display:block;font-size:18px}
+.s2fig figcaption span{display:block;font-size:14px;color:var(--muted)}
+.s2fig.left b{color:var(--brown)} .s2fig.center b{color:var(--ink)} .s2fig.right b{color:var(--brick)}
+.s2link{flex:0 0 110px;align-self:center;margin-top:30px}
+.s2link svg{width:100%;display:block}
+@media (max-width:700px){
+  .s2fig .s2who svg{width:56px;flex-basis:56px} .s2fig .s2who svg+svg{margin-left:-10px}
+  .s2fig.center .s2who svg{width:68px;flex-basis:68px}
+  .s2fig .s2bowl{width:60px} .s2fig.right .s2bowl{width:54px}
+  .s2fig figcaption b{font-size:15px} .s2fig figcaption span{font-size:12px}
+  .s2link{flex-basis:44px}
+}
