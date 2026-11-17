@@ -259,3 +259,28 @@ body.screen .masthead{display:none}
 .venn .vhead{font-size:16px}
 .write .vfb{font-family:var(--hand);font-size:15px;color:var(--brick);margin-top:4px}
 .write .vfb.good{color:var(--sage-d)}
+
+/* 歸納三任務 */
+.task{margin:22px 0 10px;padding-top:10px;border-top:1px solid var(--rule)}
+.task .tno{font-family:var(--hand);font-size:14px;letter-spacing:.3em;color:var(--brick)}
+.task .ttl{font-family:var(--hand);font-size:22px;margin:2px 0 6px;letter-spacing:.06em}
+.recap{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:8px 0 12px;font-size:13.5px}
+.recap b{font-family:var(--hand);font-size:15px}
+.recap ul{margin:4px 0 0;padding-left:1.1em;color:var(--pencil)}
+.itab{width:100%;border-collapse:collapse;margin:6px 0 10px}
+.itab th{font-family:var(--hand);font-weight:700;font-size:15px;text-align:left;border-bottom:1.5px solid var(--ink);padding:6px 8px}
+.itab td{border-bottom:1px solid var(--rule);padding:8px;vertical-align:top;font-size:15px}
+.itab td.who{font-family:var(--hand);font-size:19px;width:4.5em}
+.itab textarea{width:100%;border:0;background:repeating-linear-gradient(transparent,transparent 29px,var(--rule) 30px);line-height:30px;font-family:var(--hand);font-size:17px;resize:vertical;padding:0 4px}
+.iword{border:0;border-bottom:1.5px solid var(--pencil);background:transparent;font-family:var(--hand);font-size:18px;width:100%;max-width:14em;padding:2px 4px}
+.iline{border:0;border-bottom:1.5px solid var(--pencil);background:transparent;font-family:var(--hand);font-size:18px;width:9em;margin:0 6px;text-align:center}
+.iword:focus,.iline:focus,.itab textarea:focus{outline:none;background-color:rgba(226,191,98,.1)}
+.sline{font-family:var(--serif);font-size:16.5px;margin:10px 0}
+.ifb{font-family:var(--hand);font-size:14px;color:var(--brick);margin-top:2px}
+.ifb.good{color:var(--sage-d)}
+.iref{font-family:var(--hand);font-size:15px;color:var(--brown);margin-top:4px;padding-left:8px;border-left:2px solid var(--yellow)}
+.chipsrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+.chip{border:1.4px solid var(--pencil);background:transparent;font-family:var(--hand);font-size:16px;padding:4px 12px;cursor:pointer}
+.chip.on{background:var(--ink);color:var(--paper2);border-color:var(--ink)}
+.chipsrow .iword{max-width:10em}
+@media (max-width:700px){ .recap{grid-template-columns:1fr} .itab td.who{width:3.2em;font-size:17px} .iline{width:7em} }

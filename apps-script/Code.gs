@@ -15,7 +15,7 @@ const DATA_HEADERS = ['key', '班級', '座號', '姓名', '前測層級', '練�
 const LOG_HEADERS = ['開始時間', '班級', '座號', '姓名', '前測層級', '模式', '完成話數',
   '第一話 一次就對', '第一話 嘗試', '第二話 一次就對', '第二話 嘗試', '第三話 一次就對', '第三話 嘗試', '第四話 一次就對', '第四話 嘗試',
   '總用時(秒)', '第一話填空', '第二話想法', '第三話一句話', '第四話想法', 'sessionId',
-  '雙圓圈：爸爸那邊', '雙圓圈：一樣的地方', '雙圓圈：媽媽和阿媽那邊', '雙圓圈：歸納'];
+  '任務一：看見生活', '任務二：取名字', '任務三：句型', '任務三：統整詞與理由'];
 const LOG_ID_COL = 21; // sessionId 所在欄（固定）
 
 function doGet() { return out({ ok: true, msg: '〈以粥養生〉閱讀小誌後端運作中。這是後端網址，請貼到 config.js。', answers: typeof ANSWERS !== 'undefined' }); }
@@ -90,8 +90,9 @@ function sheet_(name, headers) {
     sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#efe4cf');
     sh.setFrozenRows(1);
     sh.getRange(1, 1, sh.getMaxRows(), headers.length).setNumberFormat('@');
-  } else if (sh.getLastColumn && sh.getLastColumn() < headers.length) {
-    sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#efe4cf');
+  } else {
+    const cur = sh.getRange(1, 1, 1, headers.length).getValues()[0];
+    if (cur.join('|') !== headers.join('|')) sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#efe4cf');
   }
   return sh;
 }
@@ -122,10 +123,12 @@ function checkAction_(req) {
   if (!A) return { ok: false, error: '沒有這一話' };
   const tryNo = Math.max(1, Math.min(9, Number(req.tryNo) || 1));
   const res = { ok: true, results: {}, hints: {} };
-  if (lv === 1 && req.vennRef) {
-    const v = req.venn || {};
-    if (!str_(v.a, 300) || !str_(v.both, 300) || !str_(v.b, 300) || !str_(v.sum, 300)) return { ok: false, error: '三個圈圈和最後一句都寫一點，再看參考筆記' };
-    return { ok: true, vennRef: ANSWERS[1].venn || null };
+  if (lv === 1 && req.induceRef) { // 歸納任務：學生每一格都寫了，才回傳參考筆記
+    const task = Number(req.induceRef), w = req.written || {}, ref = (ANSWERS[1].induce || {})['t' + task];
+    const need = { 1: ['dad', 'ama', 'mom'], 2: ['r1', 'r2', 'r3', 'r4'], 3: ['s1', 's2', 's3', 's4', 'word', 'reason'] }[task];
+    if (!need || !ref) return { ok: false, error: '沒有這個任務' };
+    if (need.some(function (k) { return !str_(w[k], 200); })) return { ok: false, error: '每一格都寫一點，再看參考筆記' };
+    return { ok: true, ref: ref };
   }
   if (lv === 1 && req.fillOnly) {
     const f = str_(req.fill, 20).replace(/[、，,\s]/g, '');
@@ -196,7 +199,7 @@ function saveAction_(req) {
     const g = grade_(lv, { tries: tries });
     clean.levels[lv] = { tries: tries, dur: Math.max(0, Math.min(36000, Math.round(Number(r.dur) || 0))), done: !!r.done, hints: Math.min(99, Number(r.hints) || 0),
       fill: str_(r.fill, 20), reflect: str_(r.reflect, 600), g: g };
-    if (lv === 1 && r.venn) clean.levels[1].venn = { a: str_(r.venn.a, 300), both: str_(r.venn.both, 300), b: str_(r.venn.b, 300), sum: str_(r.venn.sum, 300) };
+    if (lv === 1 && r.induce) clean.levels[1].induce = cleanInduce_(r.induce);
   });
   if (exist) sessions = sessions.map(function (x) { return x.id === sid ? clean : x; });
   else sessions.push(clean);
@@ -209,6 +212,18 @@ function saveAction_(req) {
   const graded = {}; Object.keys(clean.levels).forEach(function (lv) { graded[lv] = clean.levels[lv].g; });
   return { ok: true, graded: graded, mode: clean.mode, pretest: clean.pretest };
 }
+function cleanInduce_(o) {
+  const pick = function (x, keys, max) { const r = {}; keys.forEach(function (k) { r[k] = str_(x && x[k], max); }); return r; };
+  return { t1: pick(o.t1, ['dad', 'ama', 'mom'], 200), t2: pick(o.t2, ['r1', 'r2', 'r3', 'r4'], 40),
+           t3: pick(o.t3, ['s1', 's2', 's3', 's4', 'word', 'reason'], 200) };
+}
+function induceText_(i, part) {
+  if (!i) return '';
+  if (part === 1) return '爸爸：' + i.t1.dad + '／阿媽：' + i.t1.ama + '／媽媽：' + i.t1.mom;
+  if (part === 2) return [i.t2.r1, i.t2.r2, i.t2.r3, i.t2.r4].join('／');
+  if (part === 3) return [i.t3.s1, i.t3.s2, i.t3.s3, i.t3.s4].join('／');
+  return i.t3.word + '：' + i.t3.reason;
+}
 function logUpsert_(st, s) {
   const sh = sheet_(SHEET_LOG, LOG_HEADERS);
   const L = s.levels, cell = function (lv, k) { return L[lv] && L[lv].g ? String(k === 'first' ? L[lv].g.first + '/' + L[lv].g.total : L[lv].g.tries) : ''; };
@@ -218,7 +233,7 @@ function logUpsert_(st, s) {
   const row = [twTime_(s.start || s.t), st.cls, st.seat, safe_(st.name), s.pretest == null ? '' : String(s.pretest), modeName, String(done),
     cell(1, 'first'), cell(1, 'tries'), cell(2, 'first'), cell(2, 'tries'), cell(3, 'first'), cell(3, 'tries'), cell(4, 'first'), cell(4, 'tries'),
     String(dur), safe_(L[1] ? L[1].fill : ''), safe_(L[2] ? L[2].reflect : ''), safe_(L[3] ? L[3].reflect : ''), safe_(L[4] ? L[4].reflect : ''), s.id,
-    safe_(L[1] && L[1].venn ? L[1].venn.a : ''), safe_(L[1] && L[1].venn ? L[1].venn.both : ''), safe_(L[1] && L[1].venn ? L[1].venn.b : ''), safe_(L[1] && L[1].venn ? L[1].venn.sum : '')];
+    safe_(induceText_(L[1] && L[1].induce, 1)), safe_(induceText_(L[1] && L[1].induce, 2)), safe_(induceText_(L[1] && L[1].induce, 3)), safe_(induceText_(L[1] && L[1].induce, 4))];
   const last = sh.getLastRow();
   if (last >= 2) {
     const ids = sh.getRange(2, LOG_ID_COL, last - 1, 1).getValues();
