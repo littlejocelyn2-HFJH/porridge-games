@@ -195,7 +195,7 @@ let curNo = 0, tOpen = 0;
 function flushTime(){ if(curNo && sess && tOpen){ const l = L(curNo); if(!l.done){ l.dur += Math.round((Date.now() - tOpen) / 1000); saveLocal(); } } tOpen = 0; }
 
 function slipHTML(c, l, no){
-  const para = sess.mode === "support" && sess.paraHints && sess.paraHints[no] ? sess.paraHints[no][c.id] : "";
+  const para = sess.mode === "support" && l.tries.length && sess.paraHints && sess.paraHints[no] ? sess.paraHints[no][c.id] : "";
   const cls = ["slip", l.locked[c.id] ? "locked" : "", l.revealed[c.id] ? "revealed" : "", selId === c.id ? "sel" : ""].join(" ");
   const note = l.notes[c.id];
   return `<div class="${cls}" data-id="${c.id}">${esc(c.t)}${para && !l.locked[c.id] ? `<span class="para">✎ ${esc(para)}</span>` : ""}${note === "✓" ? `<span class="mark">✓</span>` : note ? `<span class="why">${esc(note)}</span>` : ""}</div>`;
@@ -208,7 +208,7 @@ function renderCh(no){
   let h = `<div class="kicker">第${c.kanji}話　${esc(c.kicker)}</div>
     <h1 class="title"><span class="no">${c.kanji}</span>${esc(c.title)}</h1>
     <p class="lead">${esc(c.lead)}</p>`;
-  if(sess.mode === "support" && (no === 1 || no === 2)) h += `<p class="note">✎ 紙片上標了段落，先回課文那一段找找看。</p>`;
+  if(sess.mode === "support" && (no === 1 || no === 2)) h += `<p class="note">✎ 先自己放放看。交出去之後，還沒放對的紙片會標出段落，幫你回課文找。</p>`;
   if(sess.mode === "challenge") h += `<p class="note">✎ 小老師任務：這次沒有段落提示，挑戰一次就放對！</p>`;
   if(!API) h += `<p class="note">※ 本機模式：還沒設定後端，可以看看版面，但不能批改。</p>`;
   h += `<div id="work"></div><div class="feedback" id="fb"></div><div class="actions" id="acts"></div><div id="after"></div>`;
@@ -310,7 +310,7 @@ function renderActs(no){
   const remain = c.kind === "order" ? 0 : c.cards.filter(k => !l.place[k.id]).length;
   a.innerHTML = `<button class="btn brick" id="checkBtn" ${remain || !API ? "disabled" : ""}>交給老師看看</button>
     ${remain ? `<span class="small muted">還有 ${remain} 張紙片沒放</span>` : ""}
-    ${sess.mode !== "support" ? `<button class="textlink" id="hintBtn">需要提示嗎？</button>` : ""}
+    ${l.tries.length && sess.mode !== "challenge" ? `<button class="textlink" id="hintBtn">需要提示嗎？</button>` : ""}
     ${l.tries.length ? `<span class="small muted">第 ${l.tries.length} 次嘗試</span>` : ""}`;
   const hb = $("#hintBtn"); if(hb) hb.onclick = () => { l.hints++; saveLocal(); setFb(hintText(no), true); };
   const cb = $("#checkBtn"); if(cb) cb.onclick = () => doCheck(no);
@@ -365,14 +365,12 @@ function renderAfter(no){
   if(no === 1){
     h += `<div class="write"><div class="q">最後一張小便條：</div>
       <div class="q">${esc(c.fill.before)}<input class="line" id="fillIn" maxlength="6" value="${esc(l.fill)}" ${l.fillDone ? "disabled" : ""}>${esc(c.fill.after)}</div>
-      <div class="small muted">提示：${esc(c.fill.hint)}</div>
-      <div class="feedback ${l.fillDone ? "good" : ""}" id="fillFb">${l.fillDone ? (l.fillOk ? "✓ 對，甜的、鹹的都喜歡。" : `答案是「${esc(l.fillReveal || "甜鹹")}」：甜的、鹹的都喜歡。`) : ""}</div>
+            <div class="feedback ${l.fillDone ? "good" : ""}" id="fillFb">${l.fillDone ? (l.fillOk ? "✓ 對，甜的、鹹的都喜歡。" : `答案是「${esc(l.fillReveal || "甜鹹")}」：甜的、鹹的都喜歡。`) : ""}</div>
       ${l.fillDone ? "" : `<button class="btn sm" id="fillBtn">寫好了</button>`}</div>`;
   } else {
     h += `<div class="write"><div class="q">${esc(c.reflect.q)}</div>
       <textarea id="refIn" maxlength="300" placeholder="用自己的話寫一兩句" ${l.done || l.refDone ? "disabled" : ""}>${esc(l.reflect)}</textarea>
-      <div class="small muted">${esc(c.reflect.hint)}</div>
-      <div class="feedback good" id="refFb">${l.refNote ? esc(l.refNote) : ""}</div>
+            <div class="feedback good" id="refFb">${l.refNote ? esc(l.refNote) : ""}</div>
       ${l.done || l.refDone ? "" : `<button class="btn sm" id="refBtn">${l.refNote ? "改好了，交出去" : "寫好了"}</button>`}</div>`;
     if(c.deep && l.refDone) h += deepHTML(c, l);
   }
@@ -391,7 +389,7 @@ function renderAfter(no){
     try{
       const r = await api({ action:"check", set:"c1fill", fill:v, tryNo:l.fillTries });
       if(r.fillOk || r.fillReveal){ l.fillOk = !!r.fillOk; l.fillReveal = r.fillReveal; l.fillDone = true; }
-      else { $("#fillFb").textContent = "再看看第四段那一句。"; fb.disabled = false; }
+      else { $("#fillFb").textContent = `再看看第四段那一句。（提示：${c.fill.hint}）`; fb.disabled = false; }
     }catch(e){ $("#fillFb").textContent = "網路好像斷了，再按一次。"; fb.disabled = false; }
     saveLocal(); if(l.fillDone) renderAfter(1);
   };
@@ -450,10 +448,10 @@ function induceHTML(l){
   h += `<section class="task"><div class="tno">任務二</div><h3 class="ttl">幫這些描述取一個共同的名字</h3>
     <p class="small">左邊是課文裡的細節。試著用<b>一個詞語</b>把它「收攏」起來：這些細節，說的是哪一類的事？（像「○○習慣」「○○需求」這樣的詞）</p>
     <table class="itab"><tr><th>文章中的細節</th><th>可以統整成的詞語</th></tr>
-    ${IND.t2rows.map(([k,t]) => `<tr><td>${esc(t)}<div class="ihint">✎ ${esc(IND.t2hint[k])}</div></td><td><input class="iword ${d.t2sel === k ? "pick" : ""}" data-t="2" data-k="${k}" maxlength="20" ${ro(2)} value="${esc(d.t2[k] || "")}" placeholder="一個詞語">${fb(2,k)}${d.ref[2] ? `<div class="iref">✎ 參考：${esc(d.ref[2][k])}</div>` : ""}</td></tr>`).join("")}</table>
+    ${IND.t2rows.map(([k,t]) => `<tr><td>${esc(t)}${d.t2tried && !d.ref[2] && !(d.fb[2] && d.fb[2][k] && d.fb[2][k].good) ? `<div class="ihint">✎ ${esc(IND.t2hint[k])}</div>` : ""}</td><td><input class="iword ${d.t2sel === k ? "pick" : ""}" data-t="2" data-k="${k}" maxlength="20" ${ro(2)} value="${esc(d.t2[k] || "")}" placeholder="一個詞語">${fb(2,k)}${d.ref[2] ? `<div class="iref">✎ 參考：${esc(d.ref[2][k])}</div>` : ""}</td></tr>`).join("")}</table>
     ${d.step === 2 && !d.ref[2] && d.t2tried ? (d.bankOpen ? `<div class="bank"><div class="small muted">詞語庫：先點右邊一個空格，再點下面的詞（有幾個是用不到的，要想一想）</div><div class="chipsrow">${IND.bank.map(w => `<button class="chip" data-bank="${esc(w)}">${esc(w)}</button>`).join("")}</div></div>` : `<button class="textlink" id="bankBtn">還是想不出來？打開詞語庫</button>`) : ""}
     ${d.ref[2] && d.ref[2].note ? `<div class="rquote">${esc(d.ref[2].note)}</div>` : ""}
-    ${d.step === 2 && !d.ref[2] ? `<div class="feedback" id="indMsg2">${d.t2tried ? "看看每一格的提醒，改一改再交一次。想不出來，可以打開詞語庫。" : ""}</div><button class="btn brick sm" data-go="2">${d.t2tried ? "改好了，看參考筆記" : "寫好了，看老師的提醒"}</button>` : ""}
+    ${d.step === 2 && !d.ref[2] ? `<div class="feedback" id="indMsg2">${d.t2tried ? "看看每一格的提醒和提示，改一改再交一次。想不出來，可以打開詞語庫。" : ""}</div><button class="btn brick sm" data-go="2">${d.t2tried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>` : ""}
     ${d.step === 2 && d.ref[2] ? `<button class="btn solid sm" data-next="2">下一個任務 →</button>` : ""}
   </section>`;
   if(d.step < 3) return h;
@@ -466,10 +464,10 @@ function induceHTML(l){
     <div class="chipsrow">${IND.words.map(w => `<button class="chip ${d.t3.word === w ? "on" : ""}" data-word="${esc(w)}" ${ro(3)}>${esc(w)}</button>`).join("")}
       <input class="iword" data-t="3" data-k="word" maxlength="20" ${ro(3)} value="${esc(IND.words.includes(d.t3.word) ? "" : (d.t3.word || ""))}" placeholder="或寫自己的詞"></div>
     <div class="write" style="border-top:0;margin-top:4px"><div class="q">為什麼這個詞最能涵蓋三個人？舉一個課文的證據。</div>
-      <div class="ihint">✎ 找找看：第六段哪一句話，說明了爸媽為什麼對粥的想法不同？</div>
+      ${d.t3tried && !d.ref[3] && !(d.fb[3] && d.fb[3].reason && d.fb[3].reason.good) ? `<div class="ihint">✎ 找找看：第六段哪一句話，說明了爸媽為什麼對粥的想法不同？</div>` : ""}
       <textarea data-t="3" data-k="reason" maxlength="300" ${ro(3)} placeholder="因為課文第＿段說……">${esc(d.t3.reason || "")}</textarea>${fb(3,"reason")}</div>`}
     ${d.ref[3] ? `<div class="rquote">${esc(d.ref[3].word)}</div>` : ""}
-    ${d.step === 3 && !d.ref[3] && d.t3stage2 ? `<div class="feedback" id="indMsg3"></div><button class="btn brick sm" data-go="3">寫好了，看老師的提醒</button>` : ""}
+    ${d.step === 3 && !d.ref[3] && d.t3stage2 ? `<div class="feedback" id="indMsg3">${d.t3tried ? "看看每一格的提醒和提示，改一改再交一次。" : ""}</div><button class="btn brick sm" data-go="3">${d.t3tried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>` : ""}
   </section>`;
   if(d.ref[3] && !d.done) h += `<div class="actions"><button class="btn solid" id="indDone">想好了，完成第一話</button></div>`;
   return h;
@@ -482,18 +480,15 @@ function bindInduce(l){
   document.querySelectorAll("[data-go]").forEach(b => b.onclick = async () => {
     read(); const n = Number(b.dataset.go), w = d["t" + n], msg = $("#indMsg" + n);
     const keys = n === 1 ? ["dad","ama","mom"] : n === 2 ? ["r1","r2","r3","r4"] : ["s1","s2","s3","s4","word","reason"];
-    if(n === 2 && !d.t2tried){ // 第一次：只給提醒，不給參考筆記
-      d.fb[2] = {};
-      keys.forEach(k => { const v = w[k] || "", hit = IND.t2good[k].some(x => v.includes(x)), copy = v.length > 8;
-        d.fb[2][k] = !v ? { good:false, t:"這格還空著，先試著寫一個詞" } : hit && !copy ? { good:true, t:"✓ 這個詞能收攏細節" } : copy ? { good:false, t:"這樣是在重複細節，試著找一個更大的詞" } : { good:false, t:"想一想：這些細節是在說哪一類的事？" }; });
-      d.t2tried = true; saveLocal(); renderAfter(1); return;
-    }
-    if(keys.some(k => !w[k])){ msg.textContent = "每一格都寫一點，再按一次。"; return; }
+    if(keys.some(k => !w[k]) && !(n === 2 && !d.t2tried)){ msg.textContent = "每一格都寫一點，再按一次。"; return; }
     d.fb[n] = {};
     if(n === 1) keys.forEach(k => { const hit = IND.t1why.some(x => w[k].includes(x)); d.fb[1][k] = hit ? { good:true, t:"✓ 有寫到為什麼或什麼時候" } : { good:false, t:"你寫了吃什麼，再補上「為什麼」或「什麼時候」" }; });
-    if(n === 2) keys.forEach(k => { const hit = IND.t2good[k].some(x => w[k].includes(x)); const copy = w[k].length > 8; d.fb[2][k] = hit && !copy ? { good:true, t:"✓ 這個詞能收攏細節" } : copy ? { good:false, t:"這樣是在重複細節，試著找一個更大的詞" } : { good:false, t:"想一想：這些細節是在說哪一類的事？" }; });
+    if(n === 2) keys.forEach(k => { const v = w[k] || "", hit = IND.t2good[k].some(x => v.includes(x)), copy = v.length > 8; d.fb[2][k] = !v ? { good:false, t:"這格還空著，看看提示，試著寫一個詞" } : hit && !copy ? { good:true, t:"✓ 這個詞能收攏細節" } : copy ? { good:false, t:"這樣是在重複細節，試著找一個更大的詞" } : { good:false, t:"想一想：這些細節是在說哪一類的事？" }; });
     if(n === 3){ ["s1","s2","s3","s4"].forEach(k => d.fb[3][k] = w[k].length >= 2 ? { good:true, t:"✓" } : { good:false, t:"再多寫一點" });
       d.fb[3].reason = /第.{1,3}段|說|寫|因為|證據|蘇北|臺灣|台灣|廈門|生長環境|環境/.test(w.reason) ? { good:true, t:"✓ 有拿課文當證據" } : { good:false, t:"試著加上課文的證據，例如「第六段說……」" }; }
+    // 先交、有錯才給提示：第一次有錯 → 只給提醒與提示，改過再交才看參考筆記
+    const anyBad = Object.values(d.fb[n]).some(f => !f.good);
+    if((n === 2 || n === 3) && anyBad && !d["t" + n + "tried"]){ d["t" + n + "tried"] = true; saveLocal(); renderAfter(1); return; }
     b.disabled = true;
     try{
       const r = await api({ action:"check", set:"c1t" + n, written:w });
@@ -559,11 +554,11 @@ function deepHTML(c, l){
   const D = c.deep, ro = l.done ? "disabled" : "";
   let h = `<section class="task"><div class="tno">深度思考</div><h3 class="ttl">作者為什麼這樣安排？</h3>
     <div class="q" style="font-family:var(--serif);font-size:16.5px;margin:6px 0">${esc(D.q)}</div>
-    <ul class="vguide muted">${D.guide.map(g => `<li>${esc(g)}</li>`).join("")}</ul>
+    ${l.deepTried && !l.deepRef ? `<ul class="vguide muted">${D.guide.map(g => `<li>${esc(g)}</li>`).join("")}</ul>` : ""}
     <div class="write" style="border-top:0;margin-top:0"><textarea id="deepIn" maxlength="400" ${ro} placeholder="我認為……因為……">${esc(l.deep || "")}</textarea>
     <div class="feedback ${l.deepFb && l.deepFb.good ? "good" : ""}">${l.deepFb ? esc(l.deepFb.t) : ""}</div></div>`;
   if(l.deepRef) h += `<p class="note">✎ 老師的參考筆記：和你寫的比一比，有沒有你沒想到的？可以補寫在上面。</p><div class="rquote">${esc(l.deepRef)}</div>`;
-  if(!l.done) h += `<div class="feedback" id="deepMsg"></div><div class="actions">${l.deepRef ? `<button class="btn solid" id="deepDone">補寫好了，完成第${c.kanji}話</button>` : `<button class="btn brick sm" id="deepBtn">寫好了，看老師的提醒</button>`}</div>`;
+  if(!l.done) h += `<div class="feedback" id="deepMsg"></div><div class="actions">${l.deepRef ? `<button class="btn solid" id="deepDone">補寫好了，完成第${c.kanji}話</button>` : `<button class="btn brick sm" id="deepBtn">${l.deepTried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>`}</div>`;
   return h + `</section>`;
 }
 function bindDeep(c, l, no){
@@ -574,7 +569,8 @@ function bindDeep(c, l, no){
     l.deep = ta.value.trim();
     if(l.deep.length < 6){ $("#deepMsg").textContent = "多寫一點，說說你的理由。"; return; }
     const hit = c.deep.good.filter(w => l.deep.includes(w)).length;
-    l.deepFb = hit >= 2 ? { good:true, t:"✓ 你有說到寫作安排的效果" } : { good:false, t:"✎ " + c.deep.hint };
+    l.deepFb = hit >= 2 ? { good:true, t:"✓ 你有說到寫作安排的效果" } : { good:false, t:"✎ " + c.deep.hint + " 上面的問題可以幫你想。" };
+    if(hit < 2 && !l.deepTried){ l.deepTried = true; saveLocal(); renderAfter(no); return; }
     b.disabled = true;
     try{
       const r = await api({ action:"check", set:c.deep.set, written:{ q:l.deep } });
