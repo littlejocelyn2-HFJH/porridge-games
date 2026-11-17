@@ -123,6 +123,15 @@ function checkAction_(req) {
   if (!A) return { ok: false, error: '沒有這一話' };
   const tryNo = Math.max(1, Math.min(9, Number(req.tryNo) || 1));
   const res = { ok: true, results: {}, hints: {} };
+  if (lv === 1 && req.induceT1) { // 歸納任務一：描述配對人物
+    const I = ANSWERS[1].induce || {}, K = I.t1key || {}, P = I.t1para || {}, pl = req.placements || {};
+    const out = { ok: true, results: {}, hints: {} };
+    Object.keys(K).forEach(function (id) { out.results[id] = pl[id] === K[id]; if (!out.results[id]) out.hints[id] = P[id] || ''; });
+    out.allRight = Object.keys(out.results).every(function (id) { return out.results[id]; });
+    if (!out.allRight && tryNo >= 3) { out.reveal = {}; Object.keys(K).forEach(function (id) { if (!out.results[id]) out.reveal[id] = K[id]; }); }
+    if (out.allRight || out.reveal) out.ref = I.t1 || null;
+    return out;
+  }
   if (lv === 1 && req.induceRef) { // 歸納任務：學生每一格都寫了，才回傳參考筆記
     const task = Number(req.induceRef), w = req.written || {}, ref = (ANSWERS[1].induce || {})['t' + task];
     const need = { 1: ['dad', 'ama', 'mom'], 2: ['r1', 'r2', 'r3', 'r4'], 3: ['s1', 's2', 's3', 's4', 'word', 'reason'] }[task];
@@ -214,12 +223,12 @@ function saveAction_(req) {
 }
 function cleanInduce_(o) {
   const pick = function (x, keys, max) { const r = {}; keys.forEach(function (k) { r[k] = str_(x && x[k], max); }); return r; };
-  return { t1: pick(o.t1, ['dad', 'ama', 'mom'], 200), t2: pick(o.t2, ['r1', 'r2', 'r3', 'r4'], 40),
+  return { t1: pick(o.t1, ['dad', 'ama', 'mom', 'tries'], 200), t2: pick(o.t2, ['r1', 'r2', 'r3', 'r4'], 40),
            t3: pick(o.t3, ['s1', 's2', 's3', 's4', 'word', 'reason'], 200) };
 }
 function induceText_(i, part) {
   if (!i) return '';
-  if (part === 1) return '爸爸：' + i.t1.dad + '／阿媽：' + i.t1.ama + '／媽媽：' + i.t1.mom;
+  if (part === 1) return '嘗試 ' + i.t1.tries + ' 次｜爸爸：' + i.t1.dad + '／阿媽：' + i.t1.ama + '／媽媽：' + i.t1.mom;
   if (part === 2) return [i.t2.r1, i.t2.r2, i.t2.r3, i.t2.r4].join('／');
   if (part === 3) return [i.t3.s1, i.t3.s2, i.t3.s3, i.t3.s4].join('／');
   return i.t3.word + '：' + i.t3.reason;
