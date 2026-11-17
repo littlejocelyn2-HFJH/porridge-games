@@ -63,9 +63,18 @@ async function api(payload){
 }
 
 /* ================= 學生與練習紀錄 ================= */
-let student = LS.get("pz_student", null);
-const sessKey = () => student ? `pz_sess_${student.cls}_${student.seat}` : "";
+const PREVIEW = () => SS.get("pz_preview") === "1";
+let student = PREVIEW() ? { cls:"999", seat:"1", name:"老師預覽" } : LS.get("pz_student", null);
+const sessKey = () => PREVIEW() ? "pz_sess_preview" : student ? `pz_sess_${student.cls}_${student.seat}` : "";
 let sess = student ? LS.get(sessKey(), null) : null;
+function startPreview(no, fresh){
+  SS.set("pz_preview", "1"); student = { cls:"999", seat:"1", name:"老師預覽" };
+  if(fresh) LS.del("pz_sess_preview");
+  sess = LS.get("pz_sess_preview", null); location.hash = "#ch" + no; route();
+}
+function endPreview(){
+  SS.del("pz_preview"); student = LS.get("pz_student", null); sess = student ? LS.get(sessKey(), null) : null; location.hash = "#scores";
+}
 const saveLocal = () => { if(sess) LS.set(sessKey(), sess); };
 function L(no){ sess.levels[no] = sess.levels[no] || { tries:[], dur:0, hints:0, place:{}, locked:{}, notes:{}, revealed:{}, order:null, fill:"", reflect:"" }; return sess.levels[no]; }
 const chDone = no => !!(sess && sess.levels[no] && sess.levels[no].done);
@@ -82,7 +91,8 @@ async function ensureSession(){
 
 /* ================= 頁首 ================= */
 function renderMast(cur){
-  $("#who").textContent = student ? `${student.cls} 班 ${student.seat} 號 ${student.name}` : "";
+  if(PREVIEW()){ $("#who").innerHTML = `<span class="tag">老師預覽中・不存紀錄</span> <button class="textlink" id="endPrev">結束預覽</button>`; $("#endPrev").onclick = endPreview; }
+  else $("#who").textContent = student ? `${student.cls} 班 ${student.seat} 號 ${student.name}` : "";
   $("#chmarks").innerHTML = student && sess ? Z.chapters.map(c => `<span class="${chDone(c.no) ? "done" : ""} ${cur === c.no ? "cur" : ""}" title="第${c.kanji}話">${c.kanji}</span>`).join("") : "";
 }
 $("#brand").onclick = () => { location.hash = "#"; };
@@ -603,6 +613,7 @@ function textsOf(no, l){
 const textsFor = (s, no) => { const l = s.levels && s.levels[no]; if(!l) return {}; return l.texts || textsOf(no, l); };
 
 async function pushSave(){
+  if(PREVIEW()) return; // 預覽不存紀錄
   const levels = {};
   Object.keys(sess.levels).forEach(k => { const l = sess.levels[k]; levels[k] = { tries:l.tries, dur:l.dur, done:!!l.done, hints:l.hints, texts: textsOf(Number(k), l) }; });
   const payload = { action:"save", student, session:{ id:sess.id, start:sess.start, levels } };
@@ -718,10 +729,10 @@ function renderTBody(){
     b.innerHTML = `<div class="box"><h3>${esc(tCls)} 班的閱讀進度</h3>` + (rows.length ? rows.map(r => `<span style="display:inline-block;margin:4px 14px 4px 0;font-family:var(--hand);font-size:17px">${esc(r.seat)} ${esc(r.name)} <span class="small muted">讀完 ${r.chapters}／4 話</span></span>`).join("") : `<p class="small muted">還沒有人開始。</p>`) + `</div>`;
     return;
   }
-  const tabs = [["overview","全班概況"],["items","各話分析"],["students","學生"],["texts","文字回答"],["log","練習紀錄"],["tools","教師區"]];
+  const tabs = [["preview","題目總覽"],["overview","全班概況"],["items","各話分析"],["students","學生"],["texts","文字回答"],["log","練習紀錄"],["tools","教師區"]];
   b.innerHTML = `<div class="tabs noprint">${tabs.map(([k,t]) => `<button data-t="${k}" class="${k === tTab ? "on" : ""}">${t}</button>`).join("")}</div><div id="tPane"></div>`;
   b.querySelectorAll("[data-t]").forEach(x => x.onclick = () => { tTab = x.dataset.t; renderTBody(); });
-  ({ overview:tOverview, items:tItems, students:tStudents, texts:tTexts, log:tLog, tools:tTools })[tTab]($("#tPane"), rows);
+  ({ preview:tPreview, overview:tOverview, items:tItems, students:tStudents, texts:tTexts, log:tLog, tools:tTools })[tTab]($("#tPane"), rows);
 }
 function gOf(s, n){ return s && s.levels && s.levels[n] && s.levels[n].g; }
 function tOverview(el, rows){
@@ -818,6 +829,41 @@ function tLog(el, rows){
     const r = await api({ action:"deleteSession", password:SS.get("pz_pw"), cls:tCls, seat, sessionId:id });
     toast(r.ok ? "已刪除" : r.error); loadTeacher();
   });
+}
+function tPreview(el){
+  const A = T.answers || {}, S = A.sets || {}, G = A.grade || {};
+  const zl = c => { const m = {}; (c.zones || []).forEach(z => m[z.id] = z.label); return m; };
+  const li = arr => `<ul class="feat">${arr.map(x => `<li>${x}</li>`).join("")}</ul>`;
+  let h = `<p class="small muted">目前答案版本：<b>${esc(A.version || "（未標示）")}</b>。這一頁只有老師看得到。按「試做」會用學生畫面打開那一話，<b>不會存成紀錄</b>；做完按畫面右上角「結束預覽」回來。</p>`;
+  Z.chapters.forEach(c => {
+    const set = S[G[c.no]] || {}, L = zl(c);
+    h += `<div class="box"><div class="btnrow" style="justify-content:space-between"><h3 style="margin:0">第${c.kanji}話　${esc(c.title)}</h3>
+      <span><button class="btn sm solid" data-prev="${c.no}">試做這一話</button> <button class="textlink" data-prevnew="${c.no}">從頭試做</button></span></div>
+      <p class="small muted" style="margin:4px 0">${esc(c.kicker)}｜${esc(c.lead)}</p>`;
+    if(c.kind === "order"){
+      const ord = set.order || [], byId = {}; c.cards.forEach(k => byId[k.id] = k);
+      h += `<p class="small"><b>正確順序</b>（學生看到的是打亂的）</p><ol>${ord.map(id => `<li>${esc(byId[id] ? byId[id].t : id)} <span class="small muted">${esc((set.para || {})[id] || "")}</span></li>`).join("")}</ol>`;
+    } else {
+      h += `<div class="scroll" style="max-height:none"><table class="tb"><tr><th>紙片</th><th>正確位置</th><th>答錯時的提示</th></tr>` +
+        c.cards.slice().sort((a,b) => String((set.key || {})[a.id]).localeCompare(String((set.key || {})[b.id]))).map(k => `<tr><td>${esc(k.t)}</td><td style="white-space:nowrap"><b>${esc(L[(set.key || {})[k.id]] || "？")}</b></td><td class="small">${esc((set.para || {})[k.id] || "")}</td></tr>`).join("") + `</table></div>`;
+    }
+    if(c.no === 1){
+      const f = S.c1fill || {}, t1 = S.c1t1 || {}, t2 = S.c1t2 || {}, t3 = S.c1t3 || {}, who = { dad:"爸爸", ama:"阿媽", mom:"媽媽" };
+      h += `<h3 style="margin-top:16px">填空</h3><p class="small">${esc(c.fill.before)}＿＿${esc(c.fill.after)}　答案：<b>${esc((f.accept || []).join("／"))}</b></p>`;
+      h += `<h3>歸納・任務一：描述紙片 → 人物（拖拉）</h3>` + li(c.induceCards.map(k => `${esc(k.t)} → <b>${esc(who[(t1.key || {})[k.id]] || "？")}</b>`)) +
+        `<p class="small muted">參考說明：</p>` + li(Object.keys(who).map(k => `${who[k]}：${esc((t1.ref || {})[k] || "")}`));
+      h += `<h3>歸納・任務二：取共同的名字（自己寫）</h3>` + li(IND.t2rows.map(([k,t]) => `${esc(t)}<br><span class="small muted">引導句：${esc(IND.t2hint[k])}</span><br>參考：<b>${esc((t2.ref || {})[k] || "")}</b>`)) +
+        `<p class="small">詞語庫（第一次交過後才出現）：${IND.bank.map(esc).join("、")}</p>`;
+      h += `<h3>歸納・任務三：往上一層（自己寫）</h3>` + li(IND.t3.map(([k,a,b]) => `${esc(a)}＿＿${esc(b)}<br><span class="small muted">參考：${esc((t3.ref || {})[k] || "")}</span>`)) +
+        `<p class="small">統整詞（句型寫完才出現）：${IND.words.map(esc).join("、")}＋自己寫的詞</p><div class="rquote">${esc((t3.ref || {}).word || "")}</div>`;
+    }
+    if(c.reflect) h += `<h3 style="margin-top:16px">書寫題</h3><p class="small">${esc(c.reflect.q)}<br><span class="muted">提示：${esc(c.reflect.hint)}</span></p>`;
+    if(c.deep){ const d = S[c.deep.set] || {}; h += `<h3>深度思考</h3><p class="small">${esc(c.deep.q)}</p>` + li(c.deep.guide.map(esc)) + `<div class="rquote">${esc((d.ref || {}).q || "（後端還沒有這題的參考筆記，請貼更新代碼）")}</div>`; }
+    h += `</div>`;
+  });
+  el.innerHTML = h;
+  el.querySelectorAll("[data-prev]").forEach(b => b.onclick = () => startPreview(Number(b.dataset.prev), false));
+  el.querySelectorAll("[data-prevnew]").forEach(b => b.onclick = () => startPreview(Number(b.dataset.prevnew), true));
 }
 function tTools(el){
   el.innerHTML = `<div class="box"><h3>更新答案</h3>
