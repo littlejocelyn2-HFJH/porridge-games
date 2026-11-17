@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
 <link rel="stylesheet" href="style.css?v=16">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=12"></script>
+<script src="content.js?v=13"></script>
 <script src="art.js?v=4"></script>
 </head>
 <body>
@@ -393,10 +393,10 @@ function writeHTML(c, l){
       (f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : "") +
       (l.wtried && !l.wref ? Object.keys(q.blanks).filter(b => l.wfb[q.k + "_" + b] === false).map(b => `<div class="ihint">✎ ${esc(q.blanks[b].hint)}</div>`).join("") : "") +
       (l.wref && l.wref[q.k] ? `<div class="rquote">✎ 參考筆記：${esc(l.wref[q.k])}</div>` : "") + `</div>`;
-    return `<div class="write"><div class="q">${i + 1}. ${esc(q.q)}</div>${q.guide ? `<div class="small muted" style="margin:2px 0 4px">可以從這幾個方向想：</div><ul class="vguide">${q.guide.map(g => `<li>${esc(g)}</li>`).join("")}</ul>` : ""}
+    return `<div class="write"><div class="q">${i + 1}. ${esc(q.q)}</div>
       <textarea data-w="${q.k}" maxlength="300" placeholder="${esc(q.ph)}" ${ro}>${esc(l.w[q.k] || "")}</textarea>
       ${f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""}
-      ${l.wtried && !l.wref && f && !f.good ? `<div class="ihint">✎ ${esc(q.hint)}</div>` : ""}
+      ${l.wtried && !l.wref && f && !f.good ? `<div class="ihint">✎ ${esc(q.hint)}</div>${q.guide ? `<div class="ihint">可以從這幾個方向想：</div><ul class="vguide">${q.guide.map(g => `<li>${esc(g)}</li>`).join("")}</ul>` : ""}` : ""}
       ${l.wref && l.wref[q.k] ? `<div class="rquote">✎ 參考筆記：${esc(l.wref[q.k])}</div>` : ""}</div>`; }).join("");
   if(l.wref && l.wref.note) h += `<p class="note">✎ ${esc(l.wref.note)}</p>`;
   if(!l.done) h += `<div class="feedback" id="wMsg">${l.wtried && !l.wref ? "看看每一題的提醒和提示，改一改再交一次。" : ""}</div><div class="actions">${l.wref ? `<button class="btn solid" id="wDone">看完了，完成第${c.kanji}話</button>` : `<button class="btn brick" id="wBtn">${l.wtried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>`}</div>`;
@@ -916,7 +916,7 @@ function tPreview(el){
         `</table><p class="small"><b>共通點</b>：${esc(vv.both || "（後端還沒有這題，請貼更新代碼）")}<br><span class="muted">錯了才給：${esc(IND.vhint.both)}</span></p>`;
       h += `<h3>歸納・任務二：為什麼有這樣的差異？（自己寫）</h3><div class="rquote">${esc(ww.why || "（後端還沒有這題，請貼更新代碼）")}</div>`;
     }
-    if(c.qs && c.kind !== "write") h += `<h3 style="margin-top:16px">書寫題</h3>` + li(c.qs.map((q, i) => `<b>${i + 1}. ${esc(q.q)}</b>${q.guide ? `<br><span class="small">思考方向（一開始就看得到）：${q.guide.map(esc).join("；")}</span>` : ""}<br><span class="small muted">寫錯時的提醒：${esc(q.bad)}<br>提示（交過有錯才出現）：${esc(q.hint)}</span><br><span class="small">參考：${esc(((S["c" + c.no + "w"] || {}).ref || {})[q.k] || "（後端還沒有這題，請貼更新代碼）")}</span>`));
+    if(c.qs && c.kind !== "write") h += `<h3 style="margin-top:16px">書寫題</h3>` + li(c.qs.map((q, i) => `<b>${i + 1}. ${esc(q.q)}</b>${q.guide ? `<br><span class="small">思考方向（交過有錯才出現）：${q.guide.map(esc).join("；")}</span>` : ""}<br><span class="small muted">寫錯時的提醒：${esc(q.bad)}<br>提示（交過有錯才出現）：${esc(q.hint)}</span><br><span class="small">參考：${esc(((S["c" + c.no + "w"] || {}).ref || {})[q.k] || "（後端還沒有這題，請貼更新代碼）")}</span>`));
     if(c.reflect) h += `<h3 style="margin-top:16px">書寫題</h3><p class="small">${esc(c.reflect.q)}${c.reflect.frame ? `<br><b>${c.reflect.frame.map(esc).join("＿＿＿")}</b>` : ""}<br><span class="muted">${c.reflect.blanks ? c.reflect.blanks.map((b, i) => `第 ${i + 1} 格（錯了才給）：${esc(b.hint)}　可接受：${esc(b.good.slice(0, 6).join("、"))}…`).join("<br>") : "提示：" + esc(c.reflect.hint)}</span></p>`;
     if(c.deep){ const d = S[c.deep.set] || {}; h += `<h3>深度思考</h3><p class="small">${esc(c.deep.q)}</p>` + li(c.deep.guide.map(esc)) + `<div class="rquote">${esc((d.ref || {}).q || "（後端還沒有這題的參考筆記，請貼更新代碼）")}</div>`; }
     h += `</div>`;
