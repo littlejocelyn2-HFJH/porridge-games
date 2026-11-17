@@ -355,3 +355,5 @@ body.screen .masthead{display:none}
   .s2fig figcaption b{font-size:15px} .s2fig figcaption span{font-size:12px}
   .s2link{flex-basis:44px}
 }
+.write .sframe{line-height:2.4}
+.write .sframe input.refb{width:4.6em;font-size:19px}

@@ -6,9 +6,9 @@
 <title>以粥養生・閱讀小誌</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=7"></script>
+<script src="content.js?v=8"></script>
 <script src="art.js?v=4"></script>
 </head>
 <body>
@@ -417,8 +417,11 @@ function renderAfter(no){
   } else if(c.kind === "write"){
     h += writeHTML(c, l);
   } else {
-    h += `<div class="write"><div class="q">${esc(c.reflect.q)}</div>
-      <textarea id="refIn" maxlength="300" placeholder="用自己的話寫一兩句" ${l.done || l.refDone ? "disabled" : ""}>${esc(l.reflect)}</textarea>
+    const R = c.reflect, dis = l.done || l.refDone ? "disabled" : "";
+    h += `<div class="write"><div class="q">${esc(R.q)}</div>` + (R.frame ? (() => { l.refB = l.refB || []; l.refBfb = l.refBfb || [];
+      return `<div class="q sframe">${R.frame.map((t, i) => esc(t) + (i < R.blanks.length ? `<input class="line refb" data-b="${i}" maxlength="12" ${dis} value="${esc(l.refB[i] || "")}">` : "")).join("")}</div>` +
+        R.blanks.map((b, i) => l.refBfb[i] === false && !l.refDone && !l.done ? `<div class="ihint">✎ 第 ${i + 1} 格：${esc(b.hint)}</div>` : "").join("");
+    })() : `<textarea id="refIn" maxlength="300" placeholder="用自己的話寫一兩句" ${dis}>${esc(l.reflect)}</textarea>`) + `
             <div class="feedback good" id="refFb">${l.refNote ? esc(l.refNote) : ""}</div>
       ${l.done || l.refDone ? "" : `<button class="btn sm" id="refBtn">${l.refNote ? "改好了，交出去" : "寫好了"}</button>`}</div>`;
     if(c.deep && l.refDone) h += deepHTML(c, l);
@@ -444,7 +447,18 @@ function renderAfter(no){
     saveLocal(); if(l.fillDone) renderAfter(1);
   };
   const rb = $("#refBtn");
-  if(rb) rb.onclick = () => {
+  document.querySelectorAll(".refb").forEach(x => x.addEventListener("input", () => { l.refB[x.dataset.b] = x.value.trim(); saveLocal(); }));
+  if(rb && c.reflect.frame) rb.onclick = () => {
+    const R = c.reflect; document.querySelectorAll(".refb").forEach(x => l.refB[x.dataset.b] = x.value.trim());
+    if(R.blanks.some((b, i) => !l.refB[i])){ $("#refFb").textContent = "每一格都填一個詞。"; return; }
+    l.reflect = R.frame.map((t, i) => t + (i < R.blanks.length ? l.refB[i] : "")).join("");
+    l.refBfb = R.blanks.map((b, i) => b.good.some(w => l.refB[i].includes(w)));
+    const all = l.refBfb.every(Boolean);
+    if(all || l.refNote){ l.refNote = all ? "✎ 寫得很好：由個人走向群體，一碗粥從一個人的記憶，變成大家共同的文化。" : "✎ 交出去了。對照下面的深度思考再想一想：開頭寫誰？最後寫到誰？"; if(c.deep) l.refDone = true; else finishLevel(no); }
+    else l.refNote = "✎ 有幾格還可以再想想，看看上面的提示，改一改再交一次。";
+    saveLocal(); renderAfter(no);
+  };
+  else if(rb) rb.onclick = () => {
     const v = $("#refIn").value.trim(); if(!v){ $("#refFb").textContent = "寫一句就好。"; return; }
     l.reflect = v;
     if(!l.refNote){
@@ -872,7 +886,7 @@ function tPreview(el){
         `</table><p class="small"><b>共通點</b>：${esc(vv.both || "（後端還沒有這題，請貼更新代碼）")}<br><span class="muted">錯了才給：${esc(IND.vhint.both)}</span></p>`;
       h += `<h3>歸納・任務二：為什麼有這樣的差異？（自己寫）</h3><div class="rquote">${esc(ww.why || "（後端還沒有這題，請貼更新代碼）")}</div>`;
     }
-    if(c.reflect) h += `<h3 style="margin-top:16px">書寫題</h3><p class="small">${esc(c.reflect.q)}<br><span class="muted">提示：${esc(c.reflect.hint)}</span></p>`;
+    if(c.reflect) h += `<h3 style="margin-top:16px">書寫題</h3><p class="small">${esc(c.reflect.q)}${c.reflect.frame ? `<br><b>${c.reflect.frame.map(esc).join("＿＿＿")}</b>` : ""}<br><span class="muted">${c.reflect.blanks ? c.reflect.blanks.map((b, i) => `第 ${i + 1} 格（錯了才給）：${esc(b.hint)}　可接受：${esc(b.good.slice(0, 6).join("、"))}…`).join("<br>") : "提示：" + esc(c.reflect.hint)}</span></p>`;
     if(c.deep){ const d = S[c.deep.set] || {}; h += `<h3>深度思考</h3><p class="small">${esc(c.deep.q)}</p>` + li(c.deep.guide.map(esc)) + `<div class="rquote">${esc((d.ref || {}).q || "（後端還沒有這題的參考筆記，請貼更新代碼）")}</div>`; }
     h += `</div>`;
   });
