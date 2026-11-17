@@ -6,9 +6,9 @@
 <title>以粥養生・閱讀小誌</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
-<link rel="stylesheet" href="style.css?v=18">
+<link rel="stylesheet" href="style.css?v=20">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=16"></script>
+<script src="content.js?v=17"></script>
 <script src="art.js?v=4"></script>
 </head>
 <body>
@@ -44,6 +44,7 @@
 "use strict";
 const CFG = window.PZ_CONFIG || {}, API = (CFG.sheetApi || "").trim();
 const Z = window.ZINE, CH = {}; Z.chapters.forEach(c => CH[c.no] = c);
+const NOS = Z.chapters.map(c => c.no), NCH = NOS.length;
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const LS = { get(k,d){ try{ const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } }, set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
@@ -113,8 +114,8 @@ function renderHome(){
     return `<a href="#ch${c.no}" data-ch="${c.no}"><span class="k">第${c.kanji}話</span><span class="t">${esc(c.title)}</span><span class="dots"></span>${st}</a>`;
   }).join("") + `</nav>`;
   h += `<div class="btnrow">
-      <a class="btn solid" href="#ch${nextCh()}">${done ? (done === 4 ? "再翻一次" : "繼續讀下去") : "翻開小誌"}</a>
-      ${done === 4 ? `<a class="btn" href="#report">我的讀書手帖</a>` : ""}
+      <a class="btn solid" href="#ch${nextCh()}">${done ? (done === NCH ? "再翻一次" : "繼續讀下去") : "翻開小誌"}</a>
+      ${done === NCH ? `<a class="btn" href="#report">我的讀書手帖</a>` : ""}
       <a class="btn" href="#scores">老師入口</a>
       ${student ? `<button class="textlink" id="notMe">不是我？重新登記</button>` : ""}
     </div>
@@ -209,7 +210,7 @@ function renderCh(no){
     <h1 class="title"><span class="no">${c.kanji}</span>${esc(c.title)}</h1>
     <p class="lead">${esc(c.lead)}</p>`;
   if(sess.mode === "support" && no === 1) h += `<p class="note">✎ 先自己放放看。交出去之後，還沒放對的紙片會標出段落，幫你回課文找。</p>`;
-  if(sess.mode === "challenge" && c.kind !== "write") h += `<p class="note">✎ 小老師任務：這次沒有段落提示，挑戰一次就放對！</p>`;
+  if(sess.mode === "challenge" && (c.kind === "sort" || c.kind === "slots")) h += `<p class="note">✎ 小老師任務：這次沒有段落提示，挑戰一次就放對！</p>`;
   if(!API) h += `<p class="note">※ 本機模式：還沒設定後端，可以看看版面，但不能批改。</p>`;
   h += `<div id="work"></div><div class="feedback" id="fb"></div><div class="actions" id="acts"></div><div id="after"></div>`;
   $("#pg-ch").innerHTML = h;
@@ -221,6 +222,7 @@ function renderCh(no){
 function renderWork(no){
   const c = CH[no], l = L(no), w = $("#work");
   if(c.kind === "order") return renderOrder(no);
+  if(c.kind === "compare"){ l.cardsDone = true; w.innerHTML = versionsHTML(c); $("#acts").innerHTML = ""; return; }
   if(c.kind === "write"){ if(!l.done && l.tries.some(Array.isArray)){ l.tries = []; l.firstRight = null; } l.cardsDone = true; w.innerHTML = sceneHTML(c); $("#acts").innerHTML = ""; return; }
   const inTray = c.cards.filter(k => !l.place[k.id]);
   const compact = window.innerWidth < 700;
@@ -391,6 +393,74 @@ function sceneHTML(c){
     <div class="s2bowl">${cls === "right" ? Art.spoon({ size:false }) : Art.bowl("plain", { size:false })}</div><figcaption><b>${esc(x.t)}</b><span>${esc(x.s)}</span></figcaption></figure>`;
   return `<div class="scene2">${fig(c.scene.left, "left")}<div class="s2link">${Art.zhouLink({ k:"l" })}</div>${fig(c.scene.center, "center")}<div class="s2link">${Art.zhouLink({ k:"r" })}</div>${fig(c.scene.right, "right")}</div>`;
 }
+/* 第五話：兩個版本的比較 */
+function versionsHTML(c){
+  return `<div class="versions">` + c.versions.map(v => `<article class="ver ver${v.id}"><h3>${esc(v.label)}<small>${esc(v.sub)}</small></h3>${v.paras.map(p => `<p>${esc(p)}</p>`).join("")}${v.end ? `<p class="vend">${esc(v.end)}</p>` : ""}</article>`).join("") + `</div>`;
+}
+function compareHTML(c, l){
+  const T = c.tasks, w = l.w = l.w || {}, fb = l.cfb = l.cfb || {}, ro = l.cref || l.done ? "disabled" : "";
+  const tried = l.ctried && !l.cref;
+  const note = k => fb[k] ? `<div class="ifb ${fb[k].good ? "good" : ""}">${esc(fb[k].t)}</div>` : "";
+  const hint = (k, t) => tried && fb[k] && !fb[k].good && t ? `<div class="ihint">✎ ${esc(t)}</div>` : "";
+  const ref = k => l.cref && l.cref[k] ? `<div class="rquote">✎ 參考筆記：${esc(l.cref[k])}</div>` : "";
+  const box = (g, id, t) => `<label class="chk"><input type="checkbox" data-c="${g}_${id}" ${w[g + "_" + id] ? "checked" : ""} ${ro}> ${esc(t)}</label>`;
+  let h = `<section class="task ctask"><div class="tno">${esc(T.t1.title)}</div>
+    <div class="q">讀完<b>版本 A</b>，我覺得這篇文章是在寫：（可複選）</div><div class="chks">${T.t1.items.map(([id, t]) => box("t1a", id, t)).join("")}</div>
+    <div class="q">讀完<b>版本 B</b>，我覺得這篇文章是在寫：（可複選）</div><div class="chks">${T.t1.items.map(([id, t]) => box("t1b", id, t)).join("")}</div>
+    <div class="q">${esc(T.t1.reasonQ)}</div><textarea data-c="t1_r" maxlength="200" placeholder="${esc(T.t1.ph)}" ${ro}>${esc(w.t1_r || "")}</textarea>
+    ${note("t1")}${hint("t1", fb.t1 && fb.t1.h)}${ref("t1")}</section>`;
+  h += `<section class="task ctask"><div class="tno">${esc(T.t2.title)}</div><div class="q">${esc(T.t2.q)}</div>
+    ${["a", "b"].map(k => `<div class="q small">${esc(T.t2[k].lab)}</div><textarea data-c="t2_${k}" maxlength="200" ${ro}>${esc(w["t2_" + k] || "")}</textarea>${note("t2_" + k)}${hint("t2_" + k, T.t2[k].hint)}`).join("")}${ref("t2")}</section>`;
+  h += `<section class="task ctask"><div class="tno">${esc(T.t3.title)}</div><div class="q sframe">${T.t3.frame.map(x => x === "b1" || x === "b2" ? `<input class="line" data-c="t3_${x}" maxlength="24" style="width:${x === "b1" ? 9 : 11}em;max-width:70%" ${ro} value="${esc(w["t3_" + x] || "")}">` : esc(x)).join("")}</div>
+    ${["b1", "b2"].map(b => note("t3_" + b) + hint("t3_" + b, T.t3[b].hint)).join("")}${ref("t3")}</section>`;
+  h += `<section class="task ctask"><div class="tno">${esc(T.t4.title)}</div><div class="q">${esc(T.t4.q)}</div>
+    <div class="chks">${T.t4.opts.map(([id, t]) => `<label class="chk"><input type="radio" name="t4pick" data-c="t4_pick" value="${id}" ${w.t4_pick === id ? "checked" : ""} ${ro}> ${esc(t)}</label>`).join("")}</div>
+    <div class="q">${esc(T.t4.reasonQ)}</div><textarea data-c="t4_r" maxlength="200" placeholder="${esc(T.t4.ph)}" ${ro}>${esc(w.t4_r || "")}</textarea>
+    ${note("t4")}${hint("t4", fb.t4 && fb.t4.h)}${ref("t4")}</section>`;
+  if(l.cref && l.cref.note) h += `<p class="note">✎ ${esc(l.cref.note)}</p>`;
+  if(!l.done) h += `<div class="feedback" id="cMsg">${tried ? "看看每個任務的提醒和提示，改一改再交一次。" : ""}</div><div class="actions">${l.cref ? `<button class="btn solid" id="cDone">看完了，完成第${c.kanji}話</button>` : `<button class="btn brick" id="cBtn">${l.ctried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>`}</div>`;
+  return h;
+}
+function bindCompare(c, l, no){
+  const T = c.tasks, w = l.w = l.w || {};
+  const read = () => { document.querySelectorAll("[data-c]").forEach(x => { const k = x.dataset.c;
+    if(x.type === "checkbox") w[k] = x.checked ? "1" : ""; else if(x.type === "radio"){ if(x.checked) w[k] = x.value; } else w[k] = x.value.trim(); }); saveLocal(); };
+  document.querySelectorAll("[data-c]").forEach(x => x.addEventListener(x.type === "checkbox" || x.type === "radio" ? "change" : "input", read));
+  const b = $("#cBtn");
+  if(b) b.onclick = async () => {
+    read(); const msg = $("#cMsg");
+    const any = g => T.t1.items.some(([id]) => w[g + "_" + id]);
+    if(!any("t1a") || !any("t1b")){ msg.textContent = "任務一：兩個版本都至少勾一個。"; return; }
+    if(["t1_r", "t2_a", "t2_b", "t3_b1", "t3_b2", "t4_r"].some(k => !(w[k] || "")) || !w.t4_pick){ msg.textContent = "每個任務都要完成（勾選、填空、寫理由），再交一次。"; return; }
+    const placements = { acul: w.t1a_cul ? "1" : "0", bcul: w.t1b_cul ? "1" : "0", pick: w.t4_pick };
+    b.disabled = true;
+    let r;
+    try{ r = await api({ action:"check", set:"c" + no + "opt", placements, tryNo:(l.tries.length + 1) }); }
+    catch(e){ msg.textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
+    if(!r.ok && r.error !== "沒有這一題"){ msg.textContent = r.error || "批改失敗"; b.disabled = false; return; }
+    const R = r.ok ? r.results || {} : { acul:true, bcul:true, pick:true }, H = r.ok ? r.hints || {} : {};
+    const fb = l.cfb = {};
+    const r1 = T.t1.good.test(w.t1_r);
+    fb.t1 = R.acul && R.bcul && r1 ? { good:true, t:"✓ 勾選和理由都對得上課文" } : { good:false, t:!(R.acul && R.bcul) ? "再比較一次兩個版本寫到的內容。" : "理由要回到句子。", h:[!R.acul ? H.acul : "", !R.bcul ? H.bcul : "", !r1 ? T.t1.hint : ""].filter(Boolean).join(" ") };
+    ["a", "b"].forEach(k => { const ok = T.t2[k].good.test(w["t2_" + k]); fb["t2_" + k] = ok ? { good:true, t:"✓" } : { good:false, t:"再看看這個版本寫到了哪些人、哪些事。" }; });
+    ["b1", "b2"].forEach(k => { const ok = T.t3[k].good.test(w["t3_" + k]); fb["t3_" + k] = ok ? { good:true, t:"✓" } : { good:false, t:"這一格再想想。" }; });
+    const r4 = T.t4.good.test(w.t4_r);
+    fb.t4 = R.pick && r4 ? { good:true, t:"✓ 你看出這幾段的作用了" } : { good:false, t:!R.pick ? "再想想這個選擇。" : "理由再說清楚一點。", h:[!R.pick ? H.pick : "", !r4 ? T.t4.hint : ""].filter(Boolean).join(" ") };
+    l.tries.push(placements);
+    const anyBad = Object.values(fb).some(f => !f.good);
+    if(anyBad && !l.ctried){ l.ctried = true; l.hints++; saveLocal(); b.disabled = false; renderAfter(no); return; }
+    try{
+      const rr = await api({ action:"check", set:"c" + no + "w", written:w });
+      if(!rr.ok && rr.error === "沒有這一題") l.cref = { note:"（老師還沒放上參考筆記，可以先完成這一話。）" };
+      else if(!rr.ok){ msg.textContent = rr.error || "讀取參考筆記失敗"; b.disabled = false; return; }
+      else l.cref = rr.ref || { note:"" };
+    }catch(e){ msg.textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
+    if(!anyBad) stamp(l.tries.length === 1 ? "好" : "很好");
+    saveLocal(); renderAfter(no);
+  };
+  const d = $("#cDone"); if(d) d.onclick = () => { read(); finishLevel(no); renderAfter(no); };
+}
+
 /* 書寫題組：先交 → 有錯才給提示 → 改過再交 → 參考筆記 */
 function writeHTML(c, l){
   l.w = l.w || {}; l.wfb = l.wfb || {};
@@ -465,6 +535,8 @@ function renderAfter(no){
       <div class="q">${esc(c.fill.before)}<input class="line" id="fillIn" maxlength="6" value="${esc(l.fill)}" ${l.fillDone ? "disabled" : ""}>${esc(c.fill.after)}</div>
             <div class="feedback ${l.fillDone ? "good" : ""}" id="fillFb">${l.fillDone ? (l.fillOk ? "✓ 對，甜的、鹹的都喜歡。" : `答案是「${esc(l.fillReveal || "甜鹹")}」：甜的、鹹的都喜歡。`) : ""}</div>
       ${l.fillDone ? "" : `<button class="btn sm" id="fillBtn">寫好了</button>`}</div>`;
+  } else if(c.tasks){
+    h += compareHTML(c, l);
   } else if(c.qs){
     h += writeHTML(c, l);
   } else {
@@ -480,12 +552,13 @@ function renderAfter(no){
   if(no === 1 && l.fillDone) h += induceHTML(l);
   const finished = no === 1 ? l.vennDone : l.done;
   if(finished){
-    h += `<hr class="rule"><div class="actions">${no < 4 ? `<a class="btn solid" href="#ch${no+1}">翻到第${CH[no+1].kanji}話 →</a>` : `<a class="btn solid" href="#report">翻開我的讀書手帖 →</a>`}<a class="btn" href="#">回到目次</a></div>`;
+    h += `<hr class="rule"><div class="actions">${no < NCH ? `<a class="btn solid" href="#ch${no+1}">翻到第${CH[no+1].kanji}話 →</a>` : `<a class="btn solid" href="#report">翻開我的讀書手帖 →</a>`}<a class="btn" href="#">回到目次</a></div>`;
   }
   el.innerHTML = h;
   if(no === 1 && l.fillDone) bindInduce(l);
   if(c.deep && l.refDone) bindDeep(c, l, no);
   if(c.qs) bindWrite(c, l, no);
+  if(c.tasks) bindCompare(c, l, no);
   const fb = $("#fillBtn");
   if(fb) fb.onclick = async () => {
     const v = $("#fillIn").value.trim(); if(!v) return;
@@ -676,6 +749,11 @@ function textsOf(no, l){
       if(d.tv && d.tv.both) t["雙圓圈 共通點"] = d.tv.both;
       if(d.tw && d.tw.why) t["為什麼有差異"] = d.tw.why;
     }
+  } else if(CH[no].tasks){ const w = l.w || {}, T = CH[no].tasks, lab = g => T.t1.items.filter(([id]) => w[g + "_" + id]).map(x => x[1]).join("、");
+    if(lab("t1a")) t["任務一 版本A"] = lab("t1a"); if(lab("t1b")) t["任務一 版本B"] = lab("t1b"); if(w.t1_r) t["任務一 理由"] = w.t1_r;
+    if(w.t2_a) t["任務二 版本A讓我知道"] = w.t2_a; if(w.t2_b) t["任務二 版本B讓我知道"] = w.t2_b;
+    if(w.t3_b1 || w.t3_b2) t["任務三 句子"] = T.t3.frame.map(x => x === "b1" || x === "b2" ? (w["t3_" + x] || "＿") : x).join("");
+    if(w.t4_pick) t["任務四 選擇"] = (T.t4.opts.find(o => o[0] === w.t4_pick) || [,""])[1]; if(w.t4_r) t["任務四 理由"] = w.t4_r;
   } else if(CH[no].qs){ CH[no].qs.forEach(q => { if(l.w && l.w[q.k]) t[q.q] = l.w[q.k]; }); }
   else { if(l.reflect) t["想法"] = l.reflect; if(l.deep) t["深度思考"] = l.deep; }
   return t;
@@ -696,13 +774,13 @@ async function pushSave(){
 }
 
 /* ================= 讀書手帖（報告書） ================= */
-const SKILL = { 1:"分清楚三碗粥各是誰的、怎麼吃", 2:"用一碗粥串起人物，推論他們的心意", 3:"從照片線索推論飲食文化，說出相近的原因", 4:"把粥放回千年的時間裡，思考作者最後的提問" };
+const SKILL = { 1:"分清楚三碗粥各是誰的、怎麼吃", 2:"用一碗粥串起人物，推論他們的心意", 3:"從照片線索推論飲食文化，說出相近的原因", 4:"把粥放回千年的時間裡，思考作者最後的提問", 5:"比較兩種結尾，看出段落的作用" };
 const LAYER = ["找訊息", "找訊息", "推論", "詮釋整合", "比較評估"];
 function gradeOf(s, no){
   const g = s.graded && s.graded[no];
   if(g) return g;
   const l = s.levels[no]; if(!l || !l.tries || !l.tries.length) return null;
-  const c = CH[no], tot = c.kind === "write" ? c.qs.length : c.cards.length;
+  const c = CH[no], tot = c.kind === "write" ? c.qs.length : c.kind === "compare" ? 3 : c.cards.length;
   return { first: l.firstRight == null ? 0 : l.firstRight, total: tot, tries: l.tries.length, solvedAt: l.cardsDone && !Object.keys(l.revealed || {}).length ? l.tries.length : 0 };
 }
 function reportHTML(s, stu, opt = {}){
@@ -727,8 +805,9 @@ function reportHTML(s, stu, opt = {}){
     else if(p >= 4) cmp = "前測時你就很穩，這次也可以當同學的小老師，幫忙說明你是怎麼判斷的。";
     else cmp = `前測時，你停在「${LAYER[Math.min(4, p + 1)]}」這一層；這本小誌就是幫你練這一步。`;
   }
-  const pickT = { 1:["統整詞","理由","填空（甜鹹不拘）"], 2:["想法"], 3:["想法","深度思考"], 4:["想法"] };
-  const quotes = Z.chapters.map(c => { const t = textsFor(s, c.no), keys = pickT[c.no].filter(k => t[k]);
+  const qq = (no, i) => CH[no] && CH[no].qs && CH[no].qs.at(i) ? CH[no].qs.at(i).q : "";
+  const pickT = { 1:["雙圓圈 共通點","為什麼有差異"], 2:[qq(2, -1)], 3:[qq(3, -1)], 4:[qq(4, 0), qq(4, 1)], 5:["任務三 句子","任務四 理由"] };
+  const quotes = Z.chapters.map(c => { const t = textsFor(s, c.no), keys = (pickT[c.no] || []).filter(k => k && t[k]);
     return keys.length ? `<div class="small muted">第${c.kanji}話</div><div class="rquote">${keys.map(k => (keys.length > 1 ? k + "：" : "") + esc(t[k])).join("\n")}</div>` : ""; }).join("");
   return `<section class="report">
     <div class="head"><h2>讀書手帖</h2><div class="meta">${esc(stu.cls)} 班 ${esc(stu.seat)} 號　${esc(stu.name)}<br>${fmtTime(s.start)}　〈以粥養生〉閱讀小誌${s.mode === "challenge" ? `<br><span class="tag">小老師</span>` : ""}</div></div>
@@ -788,7 +867,7 @@ async function loadTeacher(){
 const tRows = () => T.rows.filter(r => r.cls === tCls).sort((a,b) => Number(a.seat) - Number(b.seat));
 const firstSess = r => (r.sessions || [])[0];
 const bestSess = r => (r.sessions || []).slice().sort((a,b) => doneCount(b) - doneCount(a))[0];
-const doneCount = s => [1,2,3,4].filter(n => s && s.levels && s.levels[n] && s.levels[n].done).length;
+const doneCount = s => NOS.filter(n => s && s.levels && s.levels[n] && s.levels[n].done).length;
 const LVNAME = ["第0層 起步","第1層 擷取","第2層 推論","第3層 詮釋","第4層 評估"];
 const MODE = { support:"支持（附段落提示）", standard:"一般", challenge:"挑戰（小老師）" };
 
@@ -807,7 +886,7 @@ function renderTBody(){
 function gOf(s, n){ return s && s.levels && s.levels[n] && s.levels[n].g; }
 function tOverview(el, rows){
   const S = rows.map(r => ({ r, s: firstSess(r) })).filter(x => x.s);
-  let h = `<div><div class="stat"><div class="n">${S.length}</div><div class="l">開始練習</div></div><div class="stat"><div class="n">${S.filter(x => doneCount(x.s) === 4).length}</div><div class="l">四話都讀完</div></div></div>`;
+  let h = `<div><div class="stat"><div class="n">${S.length}</div><div class="l">開始練習</div></div><div class="stat"><div class="n">${S.filter(x => doneCount(x.s) === NCH).length}</div><div class="l">全部讀完</div></div></div>`;
   h += `<div class="box"><h3>各話「第一次就放對」的比例（每人第一次練習）</h3>` + Z.chapters.map(c => {
     const gs = S.map(x => gOf(x.s, c.no)).filter(Boolean);
     const p = gs.length ? Math.round(gs.reduce((a,g) => a + g.first / g.total, 0) / gs.length * 100) : 0;
@@ -827,6 +906,14 @@ function tItems(el, rows){
   Z.chapters.forEach(c => {
     const ans = A.sets ? A.sets[(A.grade || {})[c.no]] : A[c.no]; if(!ans) return;
     const ts = S.map(s => s.levels && s.levels[c.no] && s.levels[c.no].tries && s.levels[c.no].tries[0]).filter(Boolean);
+    if(c.kind === "compare"){
+      const tw = ts.filter(t => !Array.isArray(t)), key = (A.sets[A.grade[c.no]] || {}).key || {};
+      const rows = [["acul", "任務一：版本 A 勾「飲食文化」、版本 B 不勾"], ["bcul", "（版本 B 的判斷）"], ["pick", "任務四：選出作者的用意"]];
+      h += `<div class="box"><h3>第${c.kanji}話　${esc(c.title)}（${tw.length} 人）</h3><table class="tb"><tr><th>項目</th><th>第一次就對</th></tr>` +
+        rows.map(([k, lab]) => { const p = pct(tw.filter(t => t[k] === key[k]).length, tw.length); return `<tr><td>${lab}</td><td><b style="color:${p < 60 ? "var(--brick)" : "var(--sage-d)"}">${p}%</b></td></tr>`; }).join("") +
+        `</table><p class="small muted">任務二、三和各題理由是書寫，請到「文字回答」看。</p></div>`;
+      return;
+    }
     if(c.kind === "write"){
       const tw = ts.filter(t => !Array.isArray(t));
       h += `<div class="box"><h3>第${c.kanji}話　${esc(c.title)}（${tw.length} 人）</h3><table class="tb"><tr><th>題目</th><th>第一次就寫到重點</th></tr>` +
@@ -855,8 +942,8 @@ function tStudents(el, rows){
   let h = `<div class="scroll"><table class="tb"><tr><th>座號</th><th>姓名</th><th>前測</th><th>模式</th>${Z.chapters.map(c => `<th>第${c.kanji}話</th>`).join("")}<th>用時</th><th></th></tr>`;
   rows.forEach(r => {
     const s = firstSess(r); if(!s) return;
-    const dur = [1,2,3,4].reduce((a,n) => a + (s.levels[n] ? s.levels[n].dur : 0), 0);
-    const sus = [1,2,3,4].some(n => s.levels[n] && s.levels[n].done && s.levels[n].dur < (CFG.suspectSeconds || 20));
+    const dur = NOS.reduce((a,n) => a + (s.levels[n] ? s.levels[n].dur : 0), 0);
+    const sus = NOS.some(n => s.levels[n] && s.levels[n].done && s.levels[n].dur < (CFG.suspectSeconds || 20));
     h += `<tr class="${sus ? "sus" : ""}"><td>${esc(r.seat)}</td><td>${esc(r.name)}</td><td>${s.pretest == null ? "－" : LVNAME[s.pretest]}</td><td class="small">${MODE[s.mode] || ""}</td>` +
       Z.chapters.map(c => { const g = gOf(s, c.no); return `<td>${g ? `${g.first}/${g.total}<span class="small muted">（${g.tries}次）</span>` : "－"}</td>`; }).join("") +
       `<td>${fmtDur(dur)}${sus ? ` <span class="tag">過快?</span>` : ""}</td><td><button class="btn sm" data-rep="${esc(r.seat)}">手帖</button></td></tr>`;
@@ -865,7 +952,7 @@ function tStudents(el, rows){
   el.innerHTML = h;
   el.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => {
     const r = rows.find(x => x.seat === b.dataset.rep), s = firstSess(r);
-    const view = Object.assign({}, s, { graded:{} }); [1,2,3,4].forEach(n => { if(gOf(s, n)) view.graded[n] = gOf(s, n); });
+    const view = Object.assign({}, s, { graded:{} }); NOS.forEach(n => { if(gOf(s, n)) view.graded[n] = gOf(s, n); });
     $("#repBox").innerHTML = `<hr class="rule">` + reportHTML(view, r, {});
     $("#repBox").scrollIntoView({ behavior:"smooth" });
   });
@@ -891,8 +978,8 @@ function tLog(el, rows){
   let h = `<div class="btnrow"><input id="fSeat" placeholder="篩選座號" style="width:110px;padding:6px;border:1px solid var(--rule);background:var(--cream)"><button class="btn sm" id="cpBtn">複製表格（貼到 Excel）</button></div>
     <div class="scroll" style="margin-top:10px"><table class="tb" id="logT"><tr><th>開始</th><th>座號</th><th>姓名</th><th>第幾次</th><th>讀完</th>${Z.chapters.map(c => `<th>${c.kanji}</th>`).join("")}<th>用時</th><th></th></tr>`;
   all.forEach(({ r, s, i }) => {
-    const dur = [1,2,3,4].reduce((a,n) => a + (s.levels[n] ? s.levels[n].dur : 0), 0);
-    h += `<tr data-seat="${esc(r.seat)}"><td>${fmtTime(s.start || s.t)}</td><td>${esc(r.seat)}</td><td>${esc(r.name)}</td><td>${i+1}</td><td>${doneCount(s)}/4</td>` +
+    const dur = NOS.reduce((a,n) => a + (s.levels[n] ? s.levels[n].dur : 0), 0);
+    h += `<tr data-seat="${esc(r.seat)}"><td>${fmtTime(s.start || s.t)}</td><td>${esc(r.seat)}</td><td>${esc(r.name)}</td><td>${i+1}</td><td>${doneCount(s)}/${NCH}</td>` +
       Z.chapters.map(c => { const g = gOf(s, c.no); return `<td>${g ? g.first + "/" + g.total : ""}</td>`; }).join("") +
       `<td>${fmtDur(dur)}</td><td><button class="textlink" data-del="${esc(r.seat)}|${esc(s.id)}">刪除</button></td></tr>`;
   });
@@ -917,7 +1004,14 @@ function tPreview(el){
     h += `<div class="box"><div class="btnrow" style="justify-content:space-between"><h3 style="margin:0">第${c.kanji}話　${esc(c.title)}</h3>
       <span><button class="btn sm solid" data-prev="${c.no}">試做這一話</button> <button class="textlink" data-prevnew="${c.no}">從頭試做</button></span></div>
       <p class="small muted" style="margin:4px 0">${esc(c.kicker)}｜${esc(c.lead)}</p>`;
-    if(c.kind === "write"){
+    if(c.kind === "compare"){
+      const T = c.tasks, key = set.key || {}, ref = (S["c" + c.no + "w"] || {}).ref || {};
+      h += `<p class="small muted">畫面：版本 A（第八～十一段原文）與版本 B（只到第八段）並排。</p>` + li([
+        `<b>${esc(T.t1.title)}</b>：兩個版本各勾「${T.t1.items.map(x => x[1]).join("／")}」（可複選）＋寫理由。<br><span class="small">判斷：版本 A ${key.acul === "1" ? "要勾" : "不勾"}「飲食文化」，版本 B ${key.bcul === "1" ? "要勾" : "不勾"}；其他兩項自由。錯了才給：${esc((set.para || {}).acul || "")}／${esc((set.para || {}).bcul || "")}；理由提示：${esc(T.t1.hint)}</span><br><span class="small">參考：${esc(ref.t1 || "（後端還沒有這題，請貼更新代碼）")}</span>`,
+        `<b>${esc(T.t2.title)}</b>：${esc(T.t2.q)}<br><span class="small muted">錯了才給：A ${esc(T.t2.a.hint)}／B ${esc(T.t2.b.hint)}</span><br><span class="small">參考：${esc(ref.t2 || "")}</span>`,
+        `<b>${esc(T.t3.title)}</b>：${T.t3.frame.map(x => x === "b1" || x === "b2" ? "＿＿＿" : esc(x)).join("")}<br><span class="small muted">錯了才給：${esc(T.t3.b1.hint)}／${esc(T.t3.b2.hint)}</span><br><span class="small">參考：${esc(ref.t3 || "")}</span>`,
+        `<b>${esc(T.t4.title)}</b>：${esc(T.t4.q)}<br><span class="small">選項：${T.t4.opts.map(([id, t]) => (key.pick === id ? "✔" : "") + esc(t)).join("／")}</span><br><span class="small muted">錯了才給：${esc((set.para || {}).pick || "")}；理由提示：${esc(T.t4.hint)}</span><br><span class="small">參考：${esc(ref.t4 || "")}</span>`]);
+    } else if(c.kind === "write"){
       const ref = set.ref || {};
       h += `<p class="small muted">畫面：左＝${esc(c.scene.left.t)}（${esc(c.scene.left.s)}）；中＝${esc(c.scene.center.t)}；右＝${esc(c.scene.right.t)}（${esc(c.scene.right.s)}），用「粥」串起來。</p>` +
         li(c.qs.map((q, i) => `<b>${i + 1}. ${esc(q.q)}</b>${q.frame ? `<br><span class="small">${q.frame.map(line => line.think ? esc(line.think) : line.map(x => typeof x === "string" ? esc(x) : "＿＿＿").join("")).join("<br>")}</span>` : ""}<br><span class="small muted">寫錯時的提醒：${esc(q.bad)}<br>提示（交過有錯才出現）：${q.blanks ? Object.keys(q.blanks).map((b, j) => `第 ${j + 1} 格 ${esc(q.blanks[b].hint)}`).join("；") : esc(q.hint)}</span><br><span class="small">參考：${esc(ref[q.k] || "（後端還沒有這題，請貼更新代碼）")}</span>`));
@@ -1023,7 +1117,7 @@ async function route(){
   ["#pg-home","#pg-ch","#pg-report","#pg-scores","#pg-screen"].forEach(p => $(p).classList.add("hidden"));
   if(h === "#scores"){ $("#regMask").classList.add("hidden"); $("#pg-scores").classList.remove("hidden"); curNo = 0; return loadTeacher(); }
   if(h === "#screen"){ $("#regMask").classList.add("hidden"); $("#pg-screen").classList.remove("hidden"); renderScreen(); scrTimer = setInterval(renderScreen, 15000); return; }
-  const m = h.match(/^#ch([1-4])$/);
+  const m = h.match(/^#ch(\d+)$/); if(m && !CH[+m[1]]) { location.hash = "#"; return; }
   if(m || h === "#report"){
     if(!student){ afterReg = route; openReg(); $("#pg-home").classList.remove("hidden"); renderHome(); return; }
     await ensureSession();
