@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
 <link rel="stylesheet" href="style.css?v=8">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=3"></script>
+<script src="content.js?v=4"></script>
 <script src="art.js?v=2"></script>
 </head>
 <body>
@@ -359,10 +359,11 @@ function renderAfter(no){
       ${l.fillDone ? "" : `<button class="btn sm" id="fillBtn">寫好了</button>`}</div>`;
   } else {
     h += `<div class="write"><div class="q">${esc(c.reflect.q)}</div>
-      <textarea id="refIn" maxlength="300" placeholder="用自己的話寫一兩句" ${l.done ? "disabled" : ""}>${esc(l.reflect)}</textarea>
+      <textarea id="refIn" maxlength="300" placeholder="用自己的話寫一兩句" ${l.done || l.refDone ? "disabled" : ""}>${esc(l.reflect)}</textarea>
       <div class="small muted">${esc(c.reflect.hint)}</div>
       <div class="feedback good" id="refFb">${l.refNote ? esc(l.refNote) : ""}</div>
-      ${l.done ? "" : `<button class="btn sm" id="refBtn">${l.refNote ? "改好了，交出去" : "寫好了"}</button>`}</div>`;
+      ${l.done || l.refDone ? "" : `<button class="btn sm" id="refBtn">${l.refNote ? "改好了，交出去" : "寫好了"}</button>`}</div>`;
+    if(c.deep && l.refDone) h += deepHTML(c, l);
   }
   if(no === 1 && l.fillDone) h += induceHTML(l);
   const finished = no === 1 ? l.vennDone : l.done;
@@ -371,6 +372,7 @@ function renderAfter(no){
   }
   el.innerHTML = h;
   if(no === 1 && l.fillDone) bindInduce(l);
+  if(c.deep && l.refDone) bindDeep(c, l, no);
   const fb = $("#fillBtn");
   if(fb) fb.onclick = async () => {
     const v = $("#fillIn").value.trim(); if(!v) return;
@@ -389,10 +391,11 @@ function renderAfter(no){
     if(!l.refNote){
       const hit = c.reflect.good.filter(w => v.includes(w)).length;
       l.refNote = hit >= 2 ? "✎ 寫得很好，你有連回課文。" : hit === 1 ? `✎ 方向對了，可以再多說一點：${c.reflect.hint}` : `✎ ${c.reflect.hint} 想到了可以改一改，再交一次。`;
-      if(hit >= 2){ finishLevel(no); }
+      if(hit >= 2){ if(c.deep) l.refDone = true; else finishLevel(no); }
       saveLocal(); renderAfter(no); return;
     }
-    finishLevel(no); saveLocal(); renderAfter(no);
+    if(c.deep) l.refDone = true; else finishLevel(no);
+    saveLocal(); renderAfter(no);
   };
 }
 
@@ -528,6 +531,38 @@ function bindInduce(l){
   const dn = $("#indDone"); if(dn) dn.onclick = () => { read(); d.done = true; l.vennDone = true; finishLevel(1); renderAfter(1); };
 }
 
+/* 深度思考題：寫 → 提醒 → 參考筆記 → 補寫 → 完成 */
+function deepHTML(c, l){
+  const D = c.deep, ro = l.done ? "disabled" : "";
+  let h = `<section class="task"><div class="tno">深度思考</div><h3 class="ttl">作者為什麼這樣安排？</h3>
+    <div class="q" style="font-family:var(--serif);font-size:16.5px;margin:6px 0">${esc(D.q)}</div>
+    <ul class="vguide muted">${D.guide.map(g => `<li>${esc(g)}</li>`).join("")}</ul>
+    <div class="write" style="border-top:0;margin-top:0"><textarea id="deepIn" maxlength="400" ${ro} placeholder="我認為……因為……">${esc(l.deep || "")}</textarea>
+    <div class="feedback ${l.deepFb && l.deepFb.good ? "good" : ""}">${l.deepFb ? esc(l.deepFb.t) : ""}</div></div>`;
+  if(l.deepRef) h += `<p class="note">✎ 老師的參考筆記：和你寫的比一比，有沒有你沒想到的？可以補寫在上面。</p><div class="rquote">${esc(l.deepRef)}</div>`;
+  if(!l.done) h += `<div class="feedback" id="deepMsg"></div><div class="actions">${l.deepRef ? `<button class="btn solid" id="deepDone">補寫好了，完成第${c.kanji}話</button>` : `<button class="btn brick sm" id="deepBtn">寫好了，看老師的提醒</button>`}</div>`;
+  return h + `</section>`;
+}
+function bindDeep(c, l, no){
+  const ta = $("#deepIn"); if(!ta) return;
+  ta.addEventListener("input", () => { l.deep = ta.value.trim(); saveLocal(); });
+  const b = $("#deepBtn");
+  if(b) b.onclick = async () => {
+    l.deep = ta.value.trim();
+    if(l.deep.length < 6){ $("#deepMsg").textContent = "多寫一點，說說你的理由。"; return; }
+    const hit = c.deep.good.filter(w => l.deep.includes(w)).length;
+    l.deepFb = hit >= 2 ? { good:true, t:"✓ 你有說到寫作安排的效果" } : { good:false, t:"✎ " + c.deep.hint };
+    b.disabled = true;
+    try{
+      const r = await api({ action:"check", set:c.deep.set, written:{ q:l.deep } });
+      if(!r.ok){ $("#deepMsg").textContent = r.error || "讀取參考筆記失敗"; b.disabled = false; return; }
+      l.deepRef = r.ref && r.ref.q || "（老師還沒設定這題的參考筆記）";
+    }catch(e){ $("#deepMsg").textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
+    saveLocal(); renderAfter(no);
+  };
+  const dn = $("#deepDone"); if(dn) dn.onclick = () => { l.deep = ta.value.trim(); finishLevel(no); renderAfter(no); };
+}
+
 async function finishLevel(no){
   const l = L(no);
   if(!l.done){ l.dur += tOpen ? Math.round((Date.now() - tOpen) / 1000) : 0; tOpen = 0; l.done = true; }
@@ -548,7 +583,7 @@ function textsOf(no, l){
       if(d.t3 && d.t3.word) t["統整詞"] = d.t3.word;
       if(d.t3 && d.t3.reason) t["理由"] = d.t3.reason;
     }
-  } else if(l.reflect) t["想法"] = l.reflect;
+  } else { if(l.reflect) t["想法"] = l.reflect; if(l.deep) t["深度思考"] = l.deep; }
   return t;
 }
 const textsFor = (s, no) => { const l = s.levels && s.levels[no]; if(!l) return {}; return l.texts || textsOf(no, l); };
@@ -597,9 +632,9 @@ function reportHTML(s, stu, opt = {}){
     else if(p >= 4) cmp = "前測時你就很穩，這次也可以當同學的小老師，幫忙說明你是怎麼判斷的。";
     else cmp = `前測時，你停在「${LAYER[Math.min(4, p + 1)]}」這一層；這本小誌就是幫你練這一步。`;
   }
-  const pickT = { 1:["統整詞","理由","填空（甜鹹不拘）"], 2:["想法"], 3:["想法"], 4:["想法"] };
+  const pickT = { 1:["統整詞","理由","填空（甜鹹不拘）"], 2:["想法"], 3:["想法","深度思考"], 4:["想法"] };
   const quotes = Z.chapters.map(c => { const t = textsFor(s, c.no), keys = pickT[c.no].filter(k => t[k]);
-    return keys.length ? `<div class="small muted">第${c.kanji}話</div><div class="rquote">${keys.map(k => (c.no === 1 ? k + "：" : "") + esc(t[k])).join("\n")}</div>` : ""; }).join("");
+    return keys.length ? `<div class="small muted">第${c.kanji}話</div><div class="rquote">${keys.map(k => (keys.length > 1 ? k + "：" : "") + esc(t[k])).join("\n")}</div>` : ""; }).join("");
   return `<section class="report">
     <div class="head"><h2>讀書手帖</h2><div class="meta">${esc(stu.cls)} 班 ${esc(stu.seat)} 號　${esc(stu.name)}<br>${fmtTime(s.start)}　〈以粥養生〉閱讀小誌${s.mode === "challenge" ? `<br><span class="tag">小老師</span>` : ""}</div></div>
     ${cmp ? `<p class="note" style="margin:14px 0 4px">✎ ${esc(cmp)}</p>` : ""}
