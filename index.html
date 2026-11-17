@@ -6,7 +6,7 @@
 <title>以粥養生・閱讀小誌</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=8">
 <script src="config.js?v=2"></script>
 <script src="content.js?v=3"></script>
 <script src="art.js?v=2"></script>
@@ -401,6 +401,8 @@ const IND = {
   t1rows: [["dad","爸爸"],["ama","阿媽"],["mom","媽媽"]],
   t1why: ["因為","為了","所以","時候","早","晚","中午","下午","冬","夏","暑","寒","天氣","胃口","習慣","每天","固定","季節","講究","口感","點心","消夜","老家","家鄉"],
   t2rows: [["r1","早、晚都喝稀飯，中午才吃一點乾飯"],["r2","暑天吃不下油膩，中午就食糜"],["r3","桂圓糯米粥；寒冬喝上一碗，渾身暖烘烘"],["r4","下午的點心，或是消夜"]],
+  t2hint: { r1:"這是每天固定「什麼時候吃、怎麼吃」→ 「＿＿習慣」", r2:"因為天熱、吃不下，才這樣吃 → 身體的「＿＿需求」", r3:"跟冬天、天氣冷有關 → 「＿＿飲食」", r4:"說的是一天裡的哪些時候 → 「生活＿＿」" },
+  bank: ["飲食習慣", "家鄉味道", "飲食需求", "營養均衡", "季節飲食", "節省金錢", "生活作息"],
   t2good: { r1:["習慣","作息","日常","規律","生活"], r2:["需求","天氣","氣候","季節","胃口","身體","健康","調整"], r3:["季節","冬","時令","保暖","溫暖","節令"], r4:["作息","時段","時間","生活","習慣","點心"] },
   t3: [["s1","爸爸吃粥，反映出他的","。"],["s2","媽媽吃糜，反映出她對","的考量。"],["s3","阿媽吃粥的時間與種類，反映出","。"],["s4","三個人雖然都吃粥，卻呈現了不同的","。"]],
   words: ["飲食文化","生活習慣","家庭飲食特色","不同世代的飲食方式"]
@@ -433,7 +435,8 @@ function induceHTML(l){
   h += `<section class="task"><div class="tno">任務二</div><h3 class="ttl">幫這些描述取一個共同的名字</h3>
     <p class="small">左邊是課文裡的細節。試著用<b>一個詞語</b>把它「收攏」起來：這些細節，說的是哪一類的事？（像「○○習慣」「○○需求」這樣的詞）</p>
     <table class="itab"><tr><th>文章中的細節</th><th>可以統整成的詞語</th></tr>
-    ${IND.t2rows.map(([k,t]) => `<tr><td>${esc(t)}</td><td><input class="iword" data-t="2" data-k="${k}" maxlength="20" ${ro(2)} value="${esc(d.t2[k] || "")}" placeholder="一個詞語">${fb(2,k)}${d.ref[2] ? `<div class="iref">✎ 參考：${esc(d.ref[2][k])}</div>` : ""}</td></tr>`).join("")}</table>
+    ${IND.t2rows.map(([k,t]) => `<tr><td>${esc(t)}<div class="ihint">✎ ${esc(IND.t2hint[k])}</div></td><td><input class="iword ${d.t2sel === k ? "pick" : ""}" data-t="2" data-k="${k}" maxlength="20" ${ro(2)} value="${esc(d.t2[k] || "")}" placeholder="一個詞語">${fb(2,k)}${d.ref[2] ? `<div class="iref">✎ 參考：${esc(d.ref[2][k])}</div>` : ""}</td></tr>`).join("")}</table>
+    ${d.step === 2 && !d.ref[2] ? (d.bankOpen ? `<div class="bank"><div class="small muted">詞語庫：先點右邊一個空格，再點下面的詞（有幾個是用不到的，要想一想）</div><div class="chipsrow">${IND.bank.map(w => `<button class="chip" data-bank="${esc(w)}">${esc(w)}</button>`).join("")}</div></div>` : `<button class="textlink" id="bankBtn">還是想不出來？打開詞語庫</button>`) : ""}
     ${d.ref[2] && d.ref[2].note ? `<div class="rquote">${esc(d.ref[2].note)}</div>` : ""}
     ${d.step === 2 && !d.ref[2] ? `<div class="feedback" id="indMsg2"></div><button class="btn brick sm" data-go="2">寫好了，看老師的提醒</button>` : ""}
     ${d.step === 2 && d.ref[2] ? `<button class="btn solid sm" data-next="2">下一個任務 →</button>` : ""}
@@ -512,6 +515,15 @@ function bindInduce(l){
       if(r.allRight) stamp(d.t1tries === 1 ? "好" : "很好");
     };
   }
+  document.querySelectorAll('input[data-t="2"]').forEach(el => el.addEventListener("focus", () => { d.t2sel = el.dataset.k; document.querySelectorAll('input[data-t="2"]').forEach(x => x.classList.toggle("pick", x === el)); }));
+  const bb = $("#bankBtn"); if(bb) bb.onclick = () => { read(); d.bankOpen = true; d.bankUsed = true; l.hints = (l.hints || 0) + 1; saveLocal(); renderAfter(1); };
+  document.querySelectorAll("[data-bank]").forEach(b => b.onclick = () => {
+    read();
+    const k = d.t2sel || ["r1","r2","r3","r4"].find(x => !d.t2[x]);
+    if(!k){ toast("先點右邊要填的空格"); return; }
+    d.t2[k] = b.dataset.bank; const order = ["r1","r2","r3","r4"]; d.t2sel = order.find(x => !d.t2[x]) || k;
+    saveLocal(); renderAfter(1);
+  });
   document.querySelectorAll("[data-next]").forEach(b => b.onclick = () => { read(); d.step = Number(b.dataset.next) + 1; saveLocal(); renderAfter(1); });
   const dn = $("#indDone"); if(dn) dn.onclick = () => { read(); d.done = true; l.vennDone = true; finishLevel(1); renderAfter(1); };
 }
@@ -530,6 +542,7 @@ function textsOf(no, l){
     const d = l.ind;
     if(d){
       if(d.t1 && d.t1.tries) t["任務一 配對"] = `嘗試 ${d.t1.tries} 次`;
+      if(d.bankUsed) t["任務二 用了詞語庫"] = "是";
       IND.t2rows.forEach(([k, txt]) => { if(d.t2 && d.t2[k]) t["任務二 " + txt.slice(0, 9) + "…"] = d.t2[k]; });
       IND.t3.forEach(([k, a, b], i) => { if(d.t3 && d.t3[k]) t["任務三 第" + (i + 1) + "句"] = a + d.t3[k] + b; });
       if(d.t3 && d.t3.word) t["統整詞"] = d.t3.word;
