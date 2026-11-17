@@ -6,9 +6,9 @@
 <title>以粥養生・閱讀小誌</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=16">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=11"></script>
+<script src="content.js?v=12"></script>
 <script src="art.js?v=4"></script>
 </head>
 <body>
@@ -232,7 +232,7 @@ function renderWork(no){
     const cur = inTray[l.hand]; selId = cur.id;
     return `<div class="hand"><div class="hand-top"><span>✂ 手上的紙片</span><span>${l.hand + 1}／${inTray.length}</span></div>
       <div class="hand-row"><button class="hbtn" data-hand="-1" aria-label="上一張" ${inTray.length < 2 ? "disabled" : ""}>‹</button>${slipHTML(cur, l, no).replace('class="slip', 'class="slip inhand')}<button class="hbtn" data-hand="1" aria-label="下一張" ${inTray.length < 2 ? "disabled" : ""}>›</button></div>
-      <div class="small muted" style="text-align:center">點下面的${no === 1 ? "碗" : no === 3 ? "欄位" : "盤子"}，把紙片放進去</div></div>`;
+      <div class="small muted" style="text-align:center">點下面的${no === 1 ? "碗" : c.kind === "photo" ? "照片" : c.kind === "slots" ? "欄位" : "盤子"}，把紙片放進去</div></div>`;
   };
   if(c.kind === "sort" && no === 1){
     h += trayHTML("紙片都放好了。");
@@ -247,6 +247,11 @@ function renderWork(no){
         <div class="zstamp">${Art.stamp(z.stamp, { width:60, c: z.id === "enough" ? "#5f7055" : "#b5523b" })}</div>
         <div class="zlabel">${esc(z.label)}</div>
         <div class="drop">${c.cards.filter(k => l.place[k.id] === z.id).map(k => slipHTML(k, l, no)).join("")}</div></div>`).join("") + `</div>`;
+  } else if(c.kind === "photo"){
+    h += trayHTML("國家都放好了。");
+    h += `<div class="photos">` + c.zones.map(z => { const k = c.cards.find(x => l.place[x.id] === z.id), ok = k && l.locked[k.id];
+      return `<figure class="photo zone" data-zone="${z.id}"><img src="${z.img}" alt="${esc(z.label)}" loading="lazy" draggable="false">
+        <figcaption><span class="plab">${esc(z.label)}</span><div class="drop">${k ? slipHTML(k, l, no) : `<span class="small muted">把國家放到這裡</span>`}</div>${ok ? `<div class="pnote">${esc(z.note)}</div>` : ""}</figcaption></figure>`; }).join("") + `</div>`;
   } else if(c.kind === "slots"){
     h += trayHTML("紙片都貼好了。");
     h += `<div class="slots">` + c.zones.map(z => `<div class="slotrow" data-zone="${z.id}"><div class="lab">${z.label}<small>${esc(z.note)}</small></div>
@@ -258,8 +263,8 @@ function renderWork(no){
   const this_drop = (id, zone) => {
       if(l.locked[id]) return;
       if(zone && zone !== "tray"){
-        if(c.kind === "slots" && Object.keys(l.place).some(k => l.place[k] === zone && l.locked[k])) return;
-        if(c.kind === "slots") Object.keys(l.place).forEach(k => { if(l.place[k] === zone && !l.locked[k]) delete l.place[k]; });
+        if((c.kind === "slots" || c.kind === "photo") && Object.keys(l.place).some(k => l.place[k] === zone && l.locked[k])) return;
+        if(c.kind === "slots" || c.kind === "photo") Object.keys(l.place).forEach(k => { if(l.place[k] === zone && !l.locked[k]) delete l.place[k]; });
         l.place[id] = zone; delete l.notes[id];
       } else if(zone === "tray") { delete l.place[id]; }
       selId = null; saveLocal(); renderWork(no); setFb("");
@@ -348,6 +353,7 @@ async function doCheck(no){
   if(r.allRight || r.reveal){
     l.cardsDone = true; saveLocal();
     stamp(r.allRight ? (l.tries.length === 1 ? "好" : "很好") : "加油");
+    if(r.allRight && c.kind === "photo") fireworks();
     setFb(r.allRight ? (l.tries.length === 1 ? "一次就全對了！" : `第 ${l.tries.length} 次全部放對了！`) : "這次老師幫你放好了正確位置，對照一下課文，看看差在哪裡。", true);
   } else {
     const ok = Object.values(r.results).filter(Boolean).length, tot = Object.keys(r.results).length;
@@ -356,6 +362,18 @@ async function doCheck(no){
   saveLocal(); renderWork(no); renderAfter(no); renderMast(no);
 }
 
+/* 煙火：低彩度手繪色的放射線，約 2.5 秒 */
+function fireworks(){
+  const cols = ["#b5523b", "#e2bf62", "#8a9a7b", "#d39a86", "#7b5a3c"];
+  const box = document.createElement("div"); box.className = "fw";
+  for(let n = 0; n < 12; n++){
+    const cx = 10 + Math.random() * 80, cy = 10 + Math.random() * 60, col = cols[n % cols.length], rays = 18;
+    let g = "";
+    for(let i = 0; i < rays; i++){ const a = i / rays * Math.PI * 2, r1 = 8, r2 = 34 + Math.random() * 14; g += `<line x1="${50 + Math.cos(a) * r1}" y1="${50 + Math.sin(a) * r1}" x2="${50 + Math.cos(a) * r2}" y2="${50 + Math.sin(a) * r2}" stroke="${col}" stroke-width="3" stroke-linecap="round"/><circle cx="${50 + Math.cos(a) * (r2 + 5)}" cy="${50 + Math.sin(a) * (r2 + 5)}" r="2" fill="${col}"/>`; }
+    box.insertAdjacentHTML("beforeend", `<svg class="burst" viewBox="0 0 100 100" style="left:${cx}%;top:${cy}%;animation-delay:${n * 0.18}s" filter="url(#pencil)">${g}</svg>`);
+  }
+  document.body.appendChild(box); setTimeout(() => box.remove(), 4200);
+}
 function stamp(t){ const b = $("#bigstamp"); b.innerHTML = Art.stamp(t, { width:150 }); b.classList.add("on"); setTimeout(() => b.classList.remove("on"), 1300); }
 
 /* 第二話：人物串連圖（丈夫 ← 作者 → 小時候的爸媽，中間用粥串起） */
@@ -375,7 +393,7 @@ function writeHTML(c, l){
       (f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : "") +
       (l.wtried && !l.wref ? Object.keys(q.blanks).filter(b => l.wfb[q.k + "_" + b] === false).map(b => `<div class="ihint">✎ ${esc(q.blanks[b].hint)}</div>`).join("") : "") +
       (l.wref && l.wref[q.k] ? `<div class="rquote">✎ 參考筆記：${esc(l.wref[q.k])}</div>` : "") + `</div>`;
-    return `<div class="write"><div class="q">${i + 1}. ${esc(q.q)}</div>
+    return `<div class="write"><div class="q">${i + 1}. ${esc(q.q)}</div>${q.guide ? `<div class="small muted" style="margin:2px 0 4px">可以從這幾個方向想：</div><ul class="vguide">${q.guide.map(g => `<li>${esc(g)}</li>`).join("")}</ul>` : ""}
       <textarea data-w="${q.k}" maxlength="300" placeholder="${esc(q.ph)}" ${ro}>${esc(l.w[q.k] || "")}</textarea>
       ${f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""}
       ${l.wtried && !l.wref && f && !f.good ? `<div class="ihint">✎ ${esc(q.hint)}</div>` : ""}
@@ -398,8 +416,9 @@ function bindWrite(c, l, no){
         l.w[q.k] = q.frame.filter(line => !line.think).map(line => line.map(x => typeof x === "string" ? x : (l.w[q.k + "_" + x.b] || "")).join("")).join(""); }
       else ok = q.good.test(l.w[q.k]);
       res[q.k] = ok ? "1" : "0"; l.wfb[q.k] = ok ? { good:true, t:"✓ 有說到重點" } : { good:false, t:q.bad }; });
-    l.tries.push(res);
-    if(l.tries.length === 1) l.firstRight = Object.values(res).filter(v => v === "1").length;
+    const WT = c.kind === "write" ? l.tries : (l.wtries = l.wtries || []);
+    WT.push(res);
+    if(c.kind === "write" && WT.length === 1) l.firstRight = Object.values(res).filter(v => v === "1").length;
     const anyBad = Object.values(res).includes("0");
     if(anyBad && !l.wtried){ l.wtried = true; l.hints++; saveLocal(); renderAfter(no); return; }
     b.disabled = true;
@@ -409,7 +428,7 @@ function bindWrite(c, l, no){
       else if(!r.ok){ $("#wMsg").textContent = r.error || "讀取參考筆記失敗"; b.disabled = false; return; }
       else l.wref = r.ref || { note:"" };
     }catch(e){ $("#wMsg").textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
-    if(!anyBad) stamp(l.tries.length === 1 ? "好" : "很好");
+    if(!anyBad) stamp(WT.length === 1 ? "好" : "很好");
     saveLocal(); renderAfter(no);
   };
   const d = $("#wDone"); if(d) d.onclick = () => { read(); finishLevel(no); renderAfter(no); };
@@ -425,7 +444,7 @@ function renderAfter(no){
       <div class="q">${esc(c.fill.before)}<input class="line" id="fillIn" maxlength="6" value="${esc(l.fill)}" ${l.fillDone ? "disabled" : ""}>${esc(c.fill.after)}</div>
             <div class="feedback ${l.fillDone ? "good" : ""}" id="fillFb">${l.fillDone ? (l.fillOk ? "✓ 對，甜的、鹹的都喜歡。" : `答案是「${esc(l.fillReveal || "甜鹹")}」：甜的、鹹的都喜歡。`) : ""}</div>
       ${l.fillDone ? "" : `<button class="btn sm" id="fillBtn">寫好了</button>`}</div>`;
-  } else if(c.kind === "write"){
+  } else if(c.qs){
     h += writeHTML(c, l);
   } else {
     const R = c.reflect, dis = l.done || l.refDone ? "disabled" : "";
@@ -445,7 +464,7 @@ function renderAfter(no){
   el.innerHTML = h;
   if(no === 1 && l.fillDone) bindInduce(l);
   if(c.deep && l.refDone) bindDeep(c, l, no);
-  if(c.kind === "write") bindWrite(c, l, no);
+  if(c.qs) bindWrite(c, l, no);
   const fb = $("#fillBtn");
   if(fb) fb.onclick = async () => {
     const v = $("#fillIn").value.trim(); if(!v) return;
@@ -636,7 +655,7 @@ function textsOf(no, l){
       if(d.tv && d.tv.both) t["雙圓圈 共通點"] = d.tv.both;
       if(d.tw && d.tw.why) t["為什麼有差異"] = d.tw.why;
     }
-  } else if(CH[no].kind === "write"){ CH[no].qs.forEach(q => { if(l.w && l.w[q.k]) t[q.q] = l.w[q.k]; }); }
+  } else if(CH[no].qs){ CH[no].qs.forEach(q => { if(l.w && l.w[q.k]) t[q.q] = l.w[q.k]; }); }
   else { if(l.reflect) t["想法"] = l.reflect; if(l.deep) t["深度思考"] = l.deep; }
   return t;
 }
@@ -656,7 +675,7 @@ async function pushSave(){
 }
 
 /* ================= 讀書手帖（報告書） ================= */
-const SKILL = { 1:"分清楚三碗粥各是誰的、怎麼吃", 2:"用一碗粥串起人物，推論他們的心意", 3:"看出文章怎樣從一個人走向一個文化", 4:"判斷證據夠不夠支持一個說法" };
+const SKILL = { 1:"分清楚三碗粥各是誰的、怎麼吃", 2:"用一碗粥串起人物，推論他們的心意", 3:"從照片線索推論飲食文化，說出相近的原因", 4:"判斷證據夠不夠支持一個說法" };
 const LAYER = ["找訊息", "找訊息", "推論", "詮釋整合", "比較評估"];
 function gradeOf(s, no){
   const g = s.graded && s.graded[no];
@@ -897,6 +916,7 @@ function tPreview(el){
         `</table><p class="small"><b>共通點</b>：${esc(vv.both || "（後端還沒有這題，請貼更新代碼）")}<br><span class="muted">錯了才給：${esc(IND.vhint.both)}</span></p>`;
       h += `<h3>歸納・任務二：為什麼有這樣的差異？（自己寫）</h3><div class="rquote">${esc(ww.why || "（後端還沒有這題，請貼更新代碼）")}</div>`;
     }
+    if(c.qs && c.kind !== "write") h += `<h3 style="margin-top:16px">書寫題</h3>` + li(c.qs.map((q, i) => `<b>${i + 1}. ${esc(q.q)}</b>${q.guide ? `<br><span class="small">思考方向（一開始就看得到）：${q.guide.map(esc).join("；")}</span>` : ""}<br><span class="small muted">寫錯時的提醒：${esc(q.bad)}<br>提示（交過有錯才出現）：${esc(q.hint)}</span><br><span class="small">參考：${esc(((S["c" + c.no + "w"] || {}).ref || {})[q.k] || "（後端還沒有這題，請貼更新代碼）")}</span>`));
     if(c.reflect) h += `<h3 style="margin-top:16px">書寫題</h3><p class="small">${esc(c.reflect.q)}${c.reflect.frame ? `<br><b>${c.reflect.frame.map(esc).join("＿＿＿")}</b>` : ""}<br><span class="muted">${c.reflect.blanks ? c.reflect.blanks.map((b, i) => `第 ${i + 1} 格（錯了才給）：${esc(b.hint)}　可接受：${esc(b.good.slice(0, 6).join("、"))}…`).join("<br>") : "提示：" + esc(c.reflect.hint)}</span></p>`;
     if(c.deep){ const d = S[c.deep.set] || {}; h += `<h3>深度思考</h3><p class="small">${esc(c.deep.q)}</p>` + li(c.deep.guide.map(esc)) + `<div class="rquote">${esc((d.ref || {}).q || "（後端還沒有這題的參考筆記，請貼更新代碼）")}</div>`; }
     h += `</div>`;

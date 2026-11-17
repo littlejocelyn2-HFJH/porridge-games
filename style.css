@@ -357,3 +357,18 @@ body.screen .masthead{display:none}
 }
 .write .sframe{line-height:2.4}
 .write .sframe input.refb{width:4.6em;font-size:19px}
+
+/* 第三話：飲食文化拼圖 */
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:14px 0}
+.photo{margin:0;background:#fffaf0;padding:8px 8px 10px;border:1px solid rgba(91,77,64,.25);box-shadow:2px 3px 0 rgba(91,77,64,.12)}
+.photo:nth-child(odd){transform:rotate(-.6deg)} .photo:nth-child(even){transform:rotate(.5deg)}
+.photo img{width:100%;aspect-ratio:448/353;object-fit:cover;display:block;filter:saturate(.85)}
+.photo figcaption{margin-top:6px}
+.photo .plab{font-family:var(--hand);font-size:15px;color:var(--muted)}
+.photo .drop{min-height:46px;border:1.5px dashed rgba(91,77,64,.35);margin-top:4px;padding:4px;display:flex;align-items:center;justify-content:center}
+.photo .pnote{font-family:var(--hand);font-size:14px;color:var(--sage-d);margin-top:4px;text-align:center}
+@media (max-width:700px){ .photos{grid-template-columns:1fr 1fr;gap:10px} .photo .drop{min-height:40px} }
+.fw{position:fixed;inset:0;pointer-events:none;z-index:60}
+.fw .burst{position:absolute;width:230px;height:230px;margin:-115px 0 0 -115px;opacity:0;transform:scale(.2);animation:fwpop 1.8s ease-out forwards}
+@keyframes fwpop{0%{opacity:0;transform:scale(.2)}20%{opacity:1}70%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.15) translateY(14px)}}
+@media (prefers-reduced-motion:reduce){ .fw .burst{animation-duration:.01s} }
