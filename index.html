@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
 <link rel="stylesheet" href="style.css?v=8">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=4"></script>
+<script src="content.js?v=5"></script>
 <script src="art.js?v=2"></script>
 </head>
 <body>
@@ -270,7 +270,8 @@ function renderWork(no){
 
 function renderOrder(no){
   const c = CH[no], l = L(no), w = $("#work");
-  if(!l.order) l.order = c.cards.map(k => k.id);
+  const ids = c.cards.map(k => k.id);
+  if(!l.order || l.order.length !== ids.length || l.order.some(id => !ids.includes(id))) l.order = ids.slice(); // 題目改過時重新排
   const byId = {}; c.cards.forEach(k => byId[k.id] = k);
   w.innerHTML = `<ol class="order" id="olist">` + l.order.map((id, i) => `<li data-li="${id}"><span class="n">${i+1}</span>${slipHTML(byId[id], l, no)}
      <span class="mv">${l.done ? "" : `<button data-up="${i}" aria-label="往上">▲</button><button data-dn="${i}" aria-label="往下">▼</button>`}</span></li>`).join("") + `</ol>`;
@@ -306,7 +307,7 @@ function renderActs(no){
 }
 function hintText(no){
   return { 1:"✎ 爸爸的稀飯在第三段；第四段說到阿媽和媽媽都愛的糜（有甜的）；阿媽的拿手鹹糜在第五段。",
-           2:"✎ 先找「爸媽都同意什麼」，再想：生病時喝什麼粥？誰餵？最後才是到了荷蘭以後。",
+           2:"✎ 先想：生病時要喝什麼粥？粥裡加什麼？誰來餵？最後才是到了荷蘭以後。",
            3:"✎ 起＝開頭寫自己喝粥；承＝家裡兩種吃法；轉＝爸媽的共同點和荷蘭；合＝古書和古人。",
            4:"✎ 問自己：這是「一個人」的例子，還是課文清楚寫出來的事？一個人的經驗，不能推到所有人。" }[no];
 }
@@ -325,7 +326,7 @@ async function doCheck(no){
   if(c.kind === "order"){
     l.notes = {};
     Object.keys(r.results).forEach(id => l.notes[id] = r.results[id] ? "✓" : (showPara && r.hints[id] ? `位置不對，再看看${r.hints[id]}` : "位置不對"));
-    if(r.reveal){ l.order = r.reveal.slice(); l.notes = {}; r.reveal.forEach(id => { l.revealed[id] = true; }); }
+    if(r.reveal){ const ids = c.cards.map(k => k.id); l.order = r.reveal.filter(id => ids.includes(id)); l.notes = {}; l.order.forEach(id => { l.revealed[id] = true; }); }
   } else {
     Object.keys(r.results).forEach(id => {
       if(r.results[id]){ l.locked[id] = true; l.notes[id] = "✓"; }
@@ -413,6 +414,7 @@ const IND = {
 function placedBy(zone){ const c = CH[1], l = L(1); return c.cards.filter(k => l.place[k.id] === zone).map(k => k.t); }
 function induceHTML(l){
   const d = l.ind = l.ind || { step:1, t1:{}, t2:{}, t3:{}, ref:{}, fb:{} };
+  if(d.t3 && (d.t3.word || d.ref[3])) d.t3stage2 = true;
   const ro = n => d.step > n || d.done ? "disabled" : "";
   const fb = (n, k) => { const f = d.fb[n] && d.fb[n][k]; return f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""; };
   let h = `<hr class="rule"><div class="kicker">歸納筆記</div>
@@ -439,9 +441,9 @@ function induceHTML(l){
     <p class="small">左邊是課文裡的細節。試著用<b>一個詞語</b>把它「收攏」起來：這些細節，說的是哪一類的事？（像「○○習慣」「○○需求」這樣的詞）</p>
     <table class="itab"><tr><th>文章中的細節</th><th>可以統整成的詞語</th></tr>
     ${IND.t2rows.map(([k,t]) => `<tr><td>${esc(t)}<div class="ihint">✎ ${esc(IND.t2hint[k])}</div></td><td><input class="iword ${d.t2sel === k ? "pick" : ""}" data-t="2" data-k="${k}" maxlength="20" ${ro(2)} value="${esc(d.t2[k] || "")}" placeholder="一個詞語">${fb(2,k)}${d.ref[2] ? `<div class="iref">✎ 參考：${esc(d.ref[2][k])}</div>` : ""}</td></tr>`).join("")}</table>
-    ${d.step === 2 && !d.ref[2] ? (d.bankOpen ? `<div class="bank"><div class="small muted">詞語庫：先點右邊一個空格，再點下面的詞（有幾個是用不到的，要想一想）</div><div class="chipsrow">${IND.bank.map(w => `<button class="chip" data-bank="${esc(w)}">${esc(w)}</button>`).join("")}</div></div>` : `<button class="textlink" id="bankBtn">還是想不出來？打開詞語庫</button>`) : ""}
+    ${d.step === 2 && !d.ref[2] && d.t2tried ? (d.bankOpen ? `<div class="bank"><div class="small muted">詞語庫：先點右邊一個空格，再點下面的詞（有幾個是用不到的，要想一想）</div><div class="chipsrow">${IND.bank.map(w => `<button class="chip" data-bank="${esc(w)}">${esc(w)}</button>`).join("")}</div></div>` : `<button class="textlink" id="bankBtn">還是想不出來？打開詞語庫</button>`) : ""}
     ${d.ref[2] && d.ref[2].note ? `<div class="rquote">${esc(d.ref[2].note)}</div>` : ""}
-    ${d.step === 2 && !d.ref[2] ? `<div class="feedback" id="indMsg2"></div><button class="btn brick sm" data-go="2">寫好了，看老師的提醒</button>` : ""}
+    ${d.step === 2 && !d.ref[2] ? `<div class="feedback" id="indMsg2">${d.t2tried ? "看看每一格的提醒，改一改再交一次。想不出來，可以打開詞語庫。" : ""}</div><button class="btn brick sm" data-go="2">${d.t2tried ? "改好了，看參考筆記" : "寫好了，看老師的提醒"}</button>` : ""}
     ${d.step === 2 && d.ref[2] ? `<button class="btn solid sm" data-next="2">下一個任務 →</button>` : ""}
   </section>`;
   if(d.step < 3) return h;
@@ -449,13 +451,15 @@ function induceHTML(l){
   h += `<section class="task"><div class="tno">任務三</div><h3 class="ttl">再往上一層想</h3>
     <p class="small">如果要用一句話描述這三個人與粥的關係，你會怎麼說？先用句型試試看：</p>
     ${IND.t3.map(([k,a,b]) => `<div class="sline">${esc(a)}<input class="iline" data-t="3" data-k="${k}" maxlength="30" ${ro(3)} value="${esc(d.t3[k] || "")}">${esc(b)}${fb(3,k)}${d.ref[3] ? `<div class="iref">✎ 參考：${esc(d.ref[3][k])}</div>` : ""}</div>`).join("")}
+    ${!d.t3stage2 ? (d.step === 3 && !d.ref[3] ? `<div class="feedback" id="indMsg3a"></div><button class="btn sm" id="t3next">句子寫好了，下一步 →</button>` : "") : `
     <p class="small" style="margin-top:14px">最後，選一個<b>最能統整三個人</b>的詞語（也可以寫自己的詞）。這些詞不完全一樣，想一想：哪一個最能涵蓋課文的證據？</p>
     <div class="chipsrow">${IND.words.map(w => `<button class="chip ${d.t3.word === w ? "on" : ""}" data-word="${esc(w)}" ${ro(3)}>${esc(w)}</button>`).join("")}
       <input class="iword" data-t="3" data-k="word" maxlength="20" ${ro(3)} value="${esc(IND.words.includes(d.t3.word) ? "" : (d.t3.word || ""))}" placeholder="或寫自己的詞"></div>
     <div class="write" style="border-top:0;margin-top:4px"><div class="q">為什麼這個詞最能涵蓋三個人？舉一個課文的證據。</div>
-      <textarea data-t="3" data-k="reason" maxlength="300" ${ro(3)} placeholder="因為課文第＿段說……">${esc(d.t3.reason || "")}</textarea>${fb(3,"reason")}</div>
+      <div class="ihint">✎ 找找看：第六段哪一句話，說明了爸媽為什麼對粥的想法不同？</div>
+      <textarea data-t="3" data-k="reason" maxlength="300" ${ro(3)} placeholder="因為課文第＿段說……">${esc(d.t3.reason || "")}</textarea>${fb(3,"reason")}</div>`}
     ${d.ref[3] ? `<div class="rquote">${esc(d.ref[3].word)}</div>` : ""}
-    ${d.step === 3 && !d.ref[3] ? `<div class="feedback" id="indMsg3"></div><button class="btn brick sm" data-go="3">寫好了，看老師的提醒</button>` : ""}
+    ${d.step === 3 && !d.ref[3] && d.t3stage2 ? `<div class="feedback" id="indMsg3"></div><button class="btn brick sm" data-go="3">寫好了，看老師的提醒</button>` : ""}
   </section>`;
   if(d.ref[3] && !d.done) h += `<div class="actions"><button class="btn solid" id="indDone">想好了，完成第一話</button></div>`;
   return h;
@@ -468,6 +472,12 @@ function bindInduce(l){
   document.querySelectorAll("[data-go]").forEach(b => b.onclick = async () => {
     read(); const n = Number(b.dataset.go), w = d["t" + n], msg = $("#indMsg" + n);
     const keys = n === 1 ? ["dad","ama","mom"] : n === 2 ? ["r1","r2","r3","r4"] : ["s1","s2","s3","s4","word","reason"];
+    if(n === 2 && !d.t2tried){ // 第一次：只給提醒，不給參考筆記
+      d.fb[2] = {};
+      keys.forEach(k => { const v = w[k] || "", hit = IND.t2good[k].some(x => v.includes(x)), copy = v.length > 8;
+        d.fb[2][k] = !v ? { good:false, t:"這格還空著，先試著寫一個詞" } : hit && !copy ? { good:true, t:"✓ 這個詞能收攏細節" } : copy ? { good:false, t:"這樣是在重複細節，試著找一個更大的詞" } : { good:false, t:"想一想：這些細節是在說哪一類的事？" }; });
+      d.t2tried = true; saveLocal(); renderAfter(1); return;
+    }
     if(keys.some(k => !w[k])){ msg.textContent = "每一格都寫一點，再按一次。"; return; }
     d.fb[n] = {};
     if(n === 1) keys.forEach(k => { const hit = IND.t1why.some(x => w[k].includes(x)); d.fb[1][k] = hit ? { good:true, t:"✓ 有寫到為什麼或什麼時候" } : { good:false, t:"你寫了吃什麼，再補上「為什麼」或「什麼時候」" }; });
@@ -528,6 +538,8 @@ function bindInduce(l){
     d.t2[k] = b.dataset.bank; const order = ["r1","r2","r3","r4"]; d.t2sel = order.find(x => !d.t2[x]) || k;
     saveLocal(); renderAfter(1);
   });
+  const t3n = $("#t3next");
+  if(t3n) t3n.onclick = () => { read(); if(["s1","s2","s3","s4"].some(k => !(d.t3[k] || "").trim())){ $("#indMsg3a").textContent = "四個句子都寫一點，再按下一步。"; return; } d.t3stage2 = true; saveLocal(); renderAfter(1); };
   document.querySelectorAll("[data-next]").forEach(b => b.onclick = () => { read(); d.step = Number(b.dataset.next) + 1; saveLocal(); renderAfter(1); });
   const dn = $("#indDone"); if(dn) dn.onclick = () => { read(); d.done = true; l.vennDone = true; finishLevel(1); renderAfter(1); };
 }
