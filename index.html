@@ -6,7 +6,7 @@
 <title>以粥養生・閱讀小誌</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=12">
 <script src="config.js?v=2"></script>
 <script src="content.js?v=6"></script>
 <script src="art.js?v=2"></script>
@@ -412,17 +412,29 @@ function renderAfter(no){
 const IND = {
   t1rows: [["dad","爸爸"],["ama","阿媽"],["mom","媽媽"]],
   t1why: ["因為","為了","所以","時候","早","晚","中午","下午","冬","夏","暑","寒","天氣","胃口","習慣","每天","固定","季節","講究","口感","點心","消夜","老家","家鄉"],
-  t2rows: [["r1","早、晚都喝稀飯，中午才吃一點乾飯"],["r2","暑天吃不下油膩，中午就食糜"],["r3","桂圓糯米粥；寒冬喝上一碗，渾身暖烘烘"],["r4","下午的點心，或是消夜"]],
-  t2hint: { r1:"這是每天固定「什麼時候吃、怎麼吃」→ 「＿＿習慣」", r2:"因為天熱、吃不下，才這樣吃 → 身體的「＿＿需求」", r3:"跟冬天、天氣冷有關 → 「＿＿飲食」", r4:"說的是一天裡的哪些時候 → 「生活＿＿」" },
-  bank: ["飲食習慣", "家鄉味道", "飲食需求", "營養均衡", "季節飲食", "節省金錢", "生活作息"],
-  t2good: { r1:["習慣","作息","日常","規律","生活"], r2:["需求","天氣","氣候","季節","胃口","身體","健康","調整"], r3:["季節","冬","時令","保暖","溫暖","節令"], r4:["作息","時段","時間","生活","習慣","點心"] },
-  t3: [["s1","爸爸吃粥，反映出他的","。"],["s2","媽媽吃糜，反映出她對","的考量。"],["s3","阿媽吃粥的時間與種類，反映出","。"],["s4","三個人雖然都吃粥，卻呈現了不同的","。"]],
-  words: ["飲食文化","生活習慣","家庭飲食特色","不同世代的飲食方式"]
+  // 任務二：雙圓圈（左＝爸爸，右＝媽媽和阿媽，中間＝交集）
+  vdims: [["name","稱呼"],["cook","煮法"],["eat","吃法"],["when","時間・季節"]],
+  vgood: {
+    a_name:["稀飯"], b_name:["糜"],
+    a_cook:["秈","在來","清爽","不稠","稀","雜糧","豆","麥","白米","水"],
+    b_cook:["粒粒分明","分明","不熬","軟而不爛","不爛","廈門","加料","料","筍","蚵","香菇","芋頭","糯米","桂圓"],
+    a_eat:["醃菜","饅頭","蒸包","包子","配"],
+    b_eat:["鹹","甜","米酒","筍","蚵","肉","香菇","芋頭","桂圓","糯米","米糕"],
+    a_when:["早","晚","每天","天天","固定","三餐"],
+    b_when:["暑","夏","熱","中午","點心","消夜","宵夜","下午","寒","冬","季節"]
+  },
+  vhint: {
+    a_name:"第三段：爸爸把它叫做什麼？", b_name:"第四段：阿媽和媽媽愛「食」什麼？",
+    a_cook:"第三段：用哪一種米？煮得稠還是稀？", b_cook:"第五段：米粒要煮成什麼樣子？裡面加了什麼？",
+    a_eat:"第三段：爸爸配什麼一起吃？", b_eat:"第四、五段：有鹹的、甜的，各加了什麼？",
+    a_when:"第三段：一天之中，哪幾餐喝？", b_when:"第四、五段：暑天、下午、消夜、寒冬……",
+    both:"第六、七段：爸媽對粥的想法不同，可是孩子生病時，他們都會做什麼？"
+  },
+  whyGood: /環境|家鄉|老家|故鄉|蘇北|臺灣|台灣|廈門|地方|地區|成長|長大|出身|背景|文化|南北/
 };
 function placedBy(zone){ const c = CH[1], l = L(1); return c.cards.filter(k => l.place[k.id] === zone).map(k => k.t); }
 function induceHTML(l){
-  const d = l.ind = l.ind || { step:1, t1:{}, t2:{}, t3:{}, ref:{}, fb:{} };
-  if(d.t3 && (d.t3.word || d.ref[3])) d.t3stage2 = true;
+  const d = l.ind = l.ind || { step:1, t1:{}, tv:{}, tw:{}, ref:{}, fb:{} };
   const ro = n => d.step > n || d.done ? "disabled" : "";
   const fb = (n, k) => { const f = d.fb[n] && d.fb[n][k]; return f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""; };
   let h = `<hr class="rule"><div class="kicker">歸納筆記</div>
@@ -444,57 +456,68 @@ function induceHTML(l){
     ${d.step === 1 && d.ref[1] ? `<p class="note">✎ 看看每個人的描述：哪些在說「為什麼」，哪些在說「什麼時候」？</p><button class="btn solid sm" data-next="1">下一個任務 →</button>` : ""}
   </section>`;
   if(d.step < 2) return h;
-  // 任務二
-  h += `<section class="task"><div class="tno">任務二</div><h3 class="ttl">幫這些描述取一個共同的名字</h3>
-    <p class="small">左邊是課文裡的細節。試著用<b>一個詞語</b>把它「收攏」起來：這些細節，說的是哪一類的事？（像「○○習慣」「○○需求」這樣的詞）</p>
-    <table class="itab"><tr><th>文章中的細節</th><th>可以統整成的詞語</th></tr>
-    ${IND.t2rows.map(([k,t]) => `<tr><td>${esc(t)}${d.t2tried && !d.ref[2] && !(d.fb[2] && d.fb[2][k] && d.fb[2][k].good) ? `<div class="ihint">✎ ${esc(IND.t2hint[k])}</div>` : ""}</td><td><input class="iword ${d.t2sel === k ? "pick" : ""}" data-t="2" data-k="${k}" maxlength="20" ${ro(2)} value="${esc(d.t2[k] || "")}" placeholder="一個詞語">${fb(2,k)}${d.ref[2] ? `<div class="iref">✎ 參考：${esc(d.ref[2][k])}</div>` : ""}</td></tr>`).join("")}</table>
-    ${d.step === 2 && !d.ref[2] && d.t2tried ? (d.bankOpen ? `<div class="bank"><div class="small muted">詞語庫：先點右邊一個空格，再點下面的詞（有幾個是用不到的，要想一想）</div><div class="chipsrow">${IND.bank.map(w => `<button class="chip" data-bank="${esc(w)}">${esc(w)}</button>`).join("")}</div></div>` : `<button class="textlink" id="bankBtn">還是想不出來？打開詞語庫</button>`) : ""}
-    ${d.ref[2] && d.ref[2].note ? `<div class="rquote">${esc(d.ref[2].note)}</div>` : ""}
-    ${d.step === 2 && !d.ref[2] ? `<div class="feedback" id="indMsg2">${d.t2tried ? "看看每一格的提醒和提示，改一改再交一次。想不出來，可以打開詞語庫。" : ""}</div><button class="btn brick sm" data-go="2">${d.t2tried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>` : ""}
-    ${d.step === 2 && d.ref[2] ? `<button class="btn solid sm" data-next="2">下一個任務 →</button>` : ""}
+  // 任務二：雙圓圈比較
+  d.tv = d.tv || {}; d.tw = d.tw || {};
+  const vf = k => { const f = d.fb.v && d.fb.v[k]; return f ? `<div class="vfb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""; };
+  const vh = k => d.vtried && !d.ref.v && !(d.fb.v && d.fb.v[k] && d.fb.v[k].good) ? `<div class="ihint">✎ ${esc(IND.vhint[k])}</div>` : "";
+  const side = (sd) => IND.vdims.map(([k, lab]) => { const key = sd + "_" + k;
+    const f = d.fb.v && d.fb.v[key];
+    return `<div class="vrow"><label>${lab}${f && f.good ? ` <span class="vok">✓</span>` : ""}</label><input class="vin" data-t="v" data-k="${key}" maxlength="40" ${ro(2)} value="${esc(d.tv[key] || "")}">${f && !f.good ? vf(key) : ""}${vh(key)}</div>`; }).join("");
+  h += `<section class="task"><div class="tno">任務二</div><h3 class="ttl">兩個圓圈：爸爸的稀飯 ✕ 媽媽和阿媽的糜</h3>
+    <p class="small">課文裡，阿媽和媽媽的吃法常常寫在一起，阿媽的拿手菜也正是媽媽愛吃的，所以把她們放在同一個圈。<br>
+    左右兩邊寫<b>不一樣的地方</b>（稱呼、煮法、吃法、時間季節）；中間交集寫<b>兩邊都有的</b>。</p>
+    <div class="venn2">${Art.venn().replace("<svg ", '<svg preserveAspectRatio="none" ')}
+      <div class="vcol a"><div class="vtop">爸爸的稀飯</div>${side("a")}</div>
+      <div class="vcol m"><div class="vtop">兩邊都有</div>
+        <textarea class="vboth" data-t="v" data-k="both" maxlength="200" ${ro(2)} placeholder="爸爸和媽媽都……">${esc(d.tv.both || "")}</textarea>${vf("both")}${vh("both")}</div>
+      <div class="vcol b"><div class="vtop">媽媽和阿媽的糜</div>${side("b")}</div>
+    </div>
+    ${d.ref.v ? `<div class="vref"><div class="a"><h4>爸爸的稀飯</h4><ul>${IND.vdims.map(([k,lab]) => `<li>${lab}：${esc(d.ref.v["a_" + k] || "")}</li>`).join("")}</ul></div>
+      <div class="m"><h4>交集</h4><p class="small">${esc(d.ref.v.both || "")}</p></div>
+      <div class="b"><h4>媽媽和阿媽的糜</h4><ul>${IND.vdims.map(([k,lab]) => `<li>${lab}：${esc(d.ref.v["b_" + k] || "")}</li>`).join("")}</ul></div></div>
+      ${d.ref.v.note ? `<div class="rquote">${esc(d.ref.v.note)}</div>` : ""}` : ""}
+    ${d.step === 2 && !d.ref.v ? `<div class="feedback" id="indMsgv">${d.vtried ? "看看每一格的提醒和提示，改一改再交一次。" : ""}</div><button class="btn brick sm" data-go="v">${d.vtried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>` : ""}
+    ${d.step === 2 && d.ref.v ? `<button class="btn solid sm" data-next="2">下一個任務 →</button>` : ""}
   </section>`;
   if(d.step < 3) return h;
-  // 任務三
-  h += `<section class="task"><div class="tno">任務三</div><h3 class="ttl">再往上一層想</h3>
-    <p class="small">如果要用一句話描述這三個人與粥的關係，你會怎麼說？先用句型試試看：</p>
-    ${IND.t3.map(([k,a,b]) => `<div class="sline">${esc(a)}<input class="iline" data-t="3" data-k="${k}" maxlength="30" ${ro(3)} value="${esc(d.t3[k] || "")}">${esc(b)}${fb(3,k)}${d.ref[3] ? `<div class="iref">✎ 參考：${esc(d.ref[3][k])}</div>` : ""}</div>`).join("")}
-    ${!d.t3stage2 ? (d.step === 3 && !d.ref[3] ? `<div class="feedback" id="indMsg3a"></div><button class="btn sm" id="t3next">句子寫好了，下一步 →</button>` : "") : `
-    <p class="small" style="margin-top:14px">最後，選一個<b>最能統整三個人</b>的詞語（也可以寫自己的詞）。這些詞不完全一樣，想一想：哪一個最能涵蓋課文的證據？</p>
-    <div class="chipsrow">${IND.words.map(w => `<button class="chip ${d.t3.word === w ? "on" : ""}" data-word="${esc(w)}" ${ro(3)}>${esc(w)}</button>`).join("")}
-      <input class="iword" data-t="3" data-k="word" maxlength="20" ${ro(3)} value="${esc(IND.words.includes(d.t3.word) ? "" : (d.t3.word || ""))}" placeholder="或寫自己的詞"></div>
-    <div class="write" style="border-top:0;margin-top:4px"><div class="q">為什麼這個詞最能涵蓋三個人？舉一個課文的證據。</div>
-      ${d.t3tried && !d.ref[3] && !(d.fb[3] && d.fb[3].reason && d.fb[3].reason.good) ? `<div class="ihint">✎ 找找看：第六段哪一句話，說明了爸媽為什麼對粥的想法不同？</div>` : ""}
-      <textarea data-t="3" data-k="reason" maxlength="300" ${ro(3)} placeholder="因為課文第＿段說……">${esc(d.t3.reason || "")}</textarea>${fb(3,"reason")}</div>`}
-    ${d.ref[3] ? `<div class="rquote">${esc(d.ref[3].word)}</div>` : ""}
-    ${d.step === 3 && !d.ref[3] && d.t3stage2 ? `<div class="feedback" id="indMsg3">${d.t3tried ? "看看每一格的提醒和提示，改一改再交一次。" : ""}</div><button class="btn brick sm" data-go="3">${d.t3tried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>` : ""}
+  // 任務三：為什麼有這樣的差異
+  h += `<section class="task"><div class="tno">任務三</div><h3 class="ttl">為什麼會有這樣的差異？</h3>
+    <p class="small">兩個圓圈裡，稱呼、煮法、吃法、時間都不一樣。為什麼爸爸和媽媽（阿媽）對粥會有這麼多不同？說說你的想法，並舉出課文的證據。</p>
+    <div class="write" style="border-top:0;margin-top:4px">
+      <textarea data-t="w" data-k="why" maxlength="300" ${ro(3)} placeholder="我認為是因為……，課文第＿段說……">${esc(d.tw.why || "")}</textarea>
+      ${(() => { const f = d.fb.w && d.fb.w.why; return f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""; })()}
+      ${d.wtried && !d.ref.w && !(d.fb.w && d.fb.w.why && d.fb.w.why.good) ? `<div class="ihint">✎ 找找看：第六段哪一句話，說明了爸媽為什麼對粥的想法不同？爸爸的老家在哪裡？</div>` : ""}</div>
+    ${d.ref.w ? `<div class="rquote">${esc(d.ref.w.why || d.ref.w.note || "")}</div>` : ""}
+    ${d.step === 3 && !d.ref.w ? `<div class="feedback" id="indMsgw">${d.wtried ? "看看提醒和提示，改一改再交一次。" : ""}</div><button class="btn brick sm" data-go="w">${d.wtried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>` : ""}
   </section>`;
-  if(d.ref[3] && !d.done) h += `<div class="actions"><button class="btn solid" id="indDone">想好了，完成第一話</button></div>`;
+  if(d.ref.w && !d.done) h += `<div class="actions"><button class="btn solid" id="indDone">想好了，完成第一話</button></div>`;
   return h;
 }
 function bindInduce(l){
   const d = l.ind;
-  const read = () => { document.querySelectorAll("[data-t]:not([data-t='1'])").forEach(el => { const t = "t" + el.dataset.t; d[t] = d[t] || {}; if(el.dataset.k === "word" && !el.value.trim() && IND.words.includes(d.t3.word)) return; d[t][el.dataset.k] = el.value.trim(); }); saveLocal(); };
+  const read = () => { document.querySelectorAll("[data-t]:not([data-t='1'])").forEach(el => { const t = "t" + el.dataset.t; d[t] = d[t] || {}; d[t][el.dataset.k] = el.value.trim(); }); saveLocal(); };
   document.querySelectorAll("[data-t]").forEach(el => el.addEventListener("input", read));
-  document.querySelectorAll("[data-word]").forEach(b => b.onclick = () => { read(); d.t3.word = b.dataset.word; const w = document.querySelector('input[data-k="word"]'); if(w) w.value = ""; saveLocal(); renderAfter(1); });
   document.querySelectorAll("[data-go]").forEach(b => b.onclick = async () => {
-    read(); const n = Number(b.dataset.go), w = d["t" + n], msg = $("#indMsg" + n);
-    const keys = n === 1 ? ["dad","ama","mom"] : n === 2 ? ["r1","r2","r3","r4"] : ["s1","s2","s3","s4","word","reason"];
-    if(keys.some(k => !w[k]) && !(n === 2 && !d.t2tried)){ msg.textContent = "每一格都寫一點，再按一次。"; return; }
+    read(); const n = b.dataset.go, w = n === "v" ? d.tv : d.tw, msg = $("#indMsg" + n);
+    const keys = n === "v" ? IND.vdims.flatMap(([k]) => ["a_" + k, "b_" + k]).concat("both") : ["why"];
+    if(keys.some(k => !w[k])){ msg.textContent = n === "v" ? "每一格都寫一點（幾個字就好），再交一次。" : "寫一兩句，再交一次。"; return; }
     d.fb[n] = {};
-    if(n === 1) keys.forEach(k => { const hit = IND.t1why.some(x => w[k].includes(x)); d.fb[1][k] = hit ? { good:true, t:"✓ 有寫到為什麼或什麼時候" } : { good:false, t:"你寫了吃什麼，再補上「為什麼」或「什麼時候」" }; });
-    if(n === 2) keys.forEach(k => { const v = w[k] || "", hit = IND.t2good[k].some(x => v.includes(x)), copy = v.length > 8; d.fb[2][k] = !v ? { good:false, t:"這格還空著，看看提示，試著寫一個詞" } : hit && !copy ? { good:true, t:"✓ 這個詞能收攏細節" } : copy ? { good:false, t:"這樣是在重複細節，試著找一個更大的詞" } : { good:false, t:"想一想：這些細節是在說哪一類的事？" }; });
-    if(n === 3){ ["s1","s2","s3","s4"].forEach(k => d.fb[3][k] = w[k].length >= 2 ? { good:true, t:"✓" } : { good:false, t:"再多寫一點" });
-      d.fb[3].reason = /第.{1,3}段|說|寫|因為|證據|蘇北|臺灣|台灣|廈門|生長環境|環境/.test(w.reason) ? { good:true, t:"✓ 有拿課文當證據" } : { good:false, t:"試著加上課文的證據，例如「第六段說……」" }; }
-    // 先交、有錯才給提示：第一次有錯 → 只給提醒與提示，改過再交才看參考筆記
+    if(n === "v"){
+      keys.forEach(k => { if(k === "both") return; const hit = IND.vgood[k].some(x => w[k].includes(x));
+        d.fb.v[k] = hit ? { good:true, t:"✓" } : { good:false, t:"再回課文找一找" }; });
+      const v = w.both, sick = /生病|病|不舒服/.test(v), heart = /煮|心意|愛|疼|照顧|關心|餵|吹涼|孩子|子女|女兒|小孩/.test(v);
+      d.fb.v.both = sick && heart ? { good:true, t:"✓ 找到了兩人共同的地方" } : sick ? { good:false, t:"有找到生病的時候，再說說他們都為孩子做了什麼" } : { good:false, t:"交集不是吃法，想想爸媽在什麼時候做了一樣的事" };
+    } else {
+      d.fb.w.why = IND.whyGood.test(w.why) ? { good:true, t:"✓ 有說到差異的原因" } : { good:false, t:"你寫的是「哪裡不一樣」，再想想「為什麼」會不一樣" };
+    }
     const anyBad = Object.values(d.fb[n]).some(f => !f.good);
-    if((n === 2 || n === 3) && anyBad && !d["t" + n + "tried"]){ d["t" + n + "tried"] = true; saveLocal(); renderAfter(1); return; }
+    if(anyBad && !d[n + "tried"]){ d[n + "tried"] = true; saveLocal(); renderAfter(1); return; }
     b.disabled = true;
     try{
-      const r = await api({ action:"check", set:"c1t" + n, written:w });
+      const r = await api({ action:"check", set:n === "v" ? "c1venn" : "c1why", written:w });
       if(!r.ok && r.error === "沒有這一題") d.ref[n] = { note:"（老師還沒放上這題的參考筆記，可以先繼續。）" };
       else if(!r.ok){ msg.textContent = r.error || "讀取參考筆記失敗"; b.disabled = false; return; }
-      else d.ref[n] = r.ref;
+      else d.ref[n] = r.ref || { note:"" };
     }catch(e){ msg.textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
     saveLocal(); renderAfter(1);
   });
@@ -534,17 +557,6 @@ function bindInduce(l){
       if(r.allRight) stamp(d.t1tries === 1 ? "好" : "很好");
     };
   }
-  document.querySelectorAll('input[data-t="2"]').forEach(el => el.addEventListener("focus", () => { d.t2sel = el.dataset.k; document.querySelectorAll('input[data-t="2"]').forEach(x => x.classList.toggle("pick", x === el)); }));
-  const bb = $("#bankBtn"); if(bb) bb.onclick = () => { read(); d.bankOpen = true; d.bankUsed = true; l.hints = (l.hints || 0) + 1; saveLocal(); renderAfter(1); };
-  document.querySelectorAll("[data-bank]").forEach(b => b.onclick = () => {
-    read();
-    const k = d.t2sel || ["r1","r2","r3","r4"].find(x => !d.t2[x]);
-    if(!k){ toast("先點右邊要填的空格"); return; }
-    d.t2[k] = b.dataset.bank; const order = ["r1","r2","r3","r4"]; d.t2sel = order.find(x => !d.t2[x]) || k;
-    saveLocal(); renderAfter(1);
-  });
-  const t3n = $("#t3next");
-  if(t3n) t3n.onclick = () => { read(); if(["s1","s2","s3","s4"].some(k => !(d.t3[k] || "").trim())){ $("#indMsg3a").textContent = "四個句子都寫一點，再按下一步。"; return; } d.t3stage2 = true; saveLocal(); renderAfter(1); };
   document.querySelectorAll("[data-next]").forEach(b => b.onclick = () => { read(); d.step = Number(b.dataset.next) + 1; saveLocal(); renderAfter(1); });
   const dn = $("#indDone"); if(dn) dn.onclick = () => { read(); d.done = true; l.vennDone = true; finishLevel(1); renderAfter(1); };
 }
@@ -597,11 +609,9 @@ function textsOf(no, l){
     const d = l.ind;
     if(d){
       if(d.t1 && d.t1.tries) t["任務一 配對"] = `嘗試 ${d.t1.tries} 次`;
-      if(d.bankUsed) t["任務二 用了詞語庫"] = "是";
-      IND.t2rows.forEach(([k, txt]) => { if(d.t2 && d.t2[k]) t["任務二 " + txt.slice(0, 9) + "…"] = d.t2[k]; });
-      IND.t3.forEach(([k, a, b], i) => { if(d.t3 && d.t3[k]) t["任務三 第" + (i + 1) + "句"] = a + d.t3[k] + b; });
-      if(d.t3 && d.t3.word) t["統整詞"] = d.t3.word;
-      if(d.t3 && d.t3.reason) t["理由"] = d.t3.reason;
+      IND.vdims.forEach(([k, lab]) => { if(d.tv && d.tv["a_" + k]) t["雙圓圈 爸爸・" + lab] = d.tv["a_" + k]; if(d.tv && d.tv["b_" + k]) t["雙圓圈 媽媽阿媽・" + lab] = d.tv["b_" + k]; });
+      if(d.tv && d.tv.both) t["雙圓圈 交集"] = d.tv.both;
+      if(d.tw && d.tw.why) t["為什麼有差異"] = d.tw.why;
     }
   } else { if(l.reflect) t["想法"] = l.reflect; if(l.deep) t["深度思考"] = l.deep; }
   return t;
@@ -844,14 +854,15 @@ function tPreview(el){
         c.cards.slice().sort((a,b) => String((set.key || {})[a.id]).localeCompare(String((set.key || {})[b.id]))).map(k => `<tr><td>${esc(k.t)}</td><td style="white-space:nowrap"><b>${esc(L[(set.key || {})[k.id]] || "？")}</b></td><td class="small">${esc((set.para || {})[k.id] || "")}</td></tr>`).join("") + `</table></div>`;
     }
     if(c.no === 1){
-      const f = S.c1fill || {}, t1 = S.c1t1 || {}, t2 = S.c1t2 || {}, t3 = S.c1t3 || {}, who = { dad:"爸爸", ama:"阿媽", mom:"媽媽" };
+      const f = S.c1fill || {}, t1 = S.c1t1 || {}, who = { dad:"爸爸", ama:"阿媽", mom:"媽媽" };
       h += `<h3 style="margin-top:16px">填空</h3><p class="small">${esc(c.fill.before)}＿＿${esc(c.fill.after)}　答案：<b>${esc((f.accept || []).join("／"))}</b></p>`;
       h += `<h3>歸納・任務一：描述紙片 → 人物（拖拉）</h3>` + li(c.induceCards.map(k => `${esc(k.t)} → <b>${esc(who[(t1.key || {})[k.id]] || "？")}</b>`)) +
         `<p class="small muted">參考說明：</p>` + li(Object.keys(who).map(k => `${who[k]}：${esc((t1.ref || {})[k] || "")}`));
-      h += `<h3>歸納・任務二：取共同的名字（自己寫）</h3>` + li(IND.t2rows.map(([k,t]) => `${esc(t)}<br><span class="small muted">引導句：${esc(IND.t2hint[k])}</span><br>參考：<b>${esc((t2.ref || {})[k] || "")}</b>`)) +
-        `<p class="small">詞語庫（第一次交過後才出現）：${IND.bank.map(esc).join("、")}</p>`;
-      h += `<h3>歸納・任務三：往上一層（自己寫）</h3>` + li(IND.t3.map(([k,a,b]) => `${esc(a)}＿＿${esc(b)}<br><span class="small muted">參考：${esc((t3.ref || {})[k] || "")}</span>`)) +
-        `<p class="small">統整詞（句型寫完才出現）：${IND.words.map(esc).join("、")}＋自己寫的詞</p><div class="rquote">${esc((t3.ref || {}).word || "")}</div>`;
+      const vv = (S.c1venn || {}).ref || {}, ww = (S.c1why || {}).ref || {};
+      h += `<h3>歸納・任務二：雙圓圈（爸爸 ✕ 媽媽和阿媽，自己寫）</h3><table class="tb"><tr><th>項目</th><th>爸爸的稀飯</th><th>媽媽和阿媽的糜</th></tr>` +
+        IND.vdims.map(([k,lab]) => `<tr><td>${lab}</td><td class="small">${esc(vv["a_" + k] || "")}<br><span class="muted">錯了才給：${esc(IND.vhint["a_" + k])}</span></td><td class="small">${esc(vv["b_" + k] || "")}<br><span class="muted">錯了才給：${esc(IND.vhint["b_" + k])}</span></td></tr>`).join("") +
+        `</table><p class="small"><b>交集</b>：${esc(vv.both || "（後端還沒有這題，請貼更新代碼）")}<br><span class="muted">錯了才給：${esc(IND.vhint.both)}</span></p>`;
+      h += `<h3>歸納・任務三：為什麼有這樣的差異？（自己寫）</h3><div class="rquote">${esc(ww.why || "（後端還沒有這題，請貼更新代碼）")}</div>`;
     }
     if(c.reflect) h += `<h3 style="margin-top:16px">書寫題</h3><p class="small">${esc(c.reflect.q)}<br><span class="muted">提示：${esc(c.reflect.hint)}</span></p>`;
     if(c.deep){ const d = S[c.deep.set] || {}; h += `<h3>深度思考</h3><p class="small">${esc(c.deep.q)}</p>` + li(c.deep.guide.map(esc)) + `<div class="rquote">${esc((d.ref || {}).q || "（後端還沒有這題的參考筆記，請貼更新代碼）")}</div>`; }

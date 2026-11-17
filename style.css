@@ -307,3 +307,27 @@ body.screen .masthead{display:none}
 .ihint{font-family:var(--hand);font-size:14px;color:var(--sage-d);margin-top:4px}
 .bank{margin:4px 0 10px;padding:10px 0;border-top:1px dashed var(--rule)}
 .iword.pick{border-bottom-color:var(--brick);background:rgba(181,82,59,.05)}
+
+/* 任務二：雙圓圈（圓圈畫在後面，隨內容伸縮） */
+.venn2{position:relative;display:grid;grid-template-columns:1fr .82fr 1fr;gap:8px;padding:70px 4% 76px;margin:12px 0 8px}
+.venn2 > svg{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.venn2 .vcol{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center}
+.venn2 .vcol.a{padding-left:12%;padding-right:4%} .venn2 .vcol.b{padding-right:12%;padding-left:4%} .venn2 .vok{color:var(--sage-d);font-weight:700}
+.venn2 .vtop{font-family:var(--hand);font-size:18px;font-weight:700;text-align:center;margin-bottom:6px}
+.venn2 .a .vtop{color:var(--sage-d)} .venn2 .b .vtop{color:var(--brick)} .venn2 .m .vtop{color:var(--brown)}
+.venn2 .vrow{margin:3px 0}
+.venn2 .vrow label{display:block;font-family:var(--hand);font-size:14px;color:var(--muted)}
+.venn2 .vin{width:100%;border:0;border-bottom:1.5px solid rgba(91,77,64,.45);background:transparent;font-family:var(--hand);font-size:16.5px;padding:3px 2px;color:var(--ink)}
+.venn2 .vin:focus,.venn2 .vboth:focus{outline:none;background:rgba(255,250,240,.6)}
+.venn2 .vboth{width:100%;min-height:150px;border:0;background:repeating-linear-gradient(transparent,transparent 29px,rgba(91,77,64,.25) 30px);line-height:30px;font-family:var(--hand);font-size:16.5px;padding:0 4px;resize:vertical;color:var(--ink)}
+.venn2 .vfb{font-family:var(--hand);font-size:14px;color:var(--brick)} .venn2 .vfb.good{color:var(--sage-d)}
+.venn2 .ihint{font-size:13.5px}
+@media (max-width:700px){
+  .venn2{grid-template-columns:1fr;padding:0;gap:14px}
+  .venn2 > svg{display:none}
+  .venn2 .vcol{padding:4px 0 4px 12px !important;border-left:3px solid var(--rule)}
+  .venn2 .vcol.a{border-left-color:var(--sage)} .venn2 .vcol.b{border-left-color:var(--brick)} .venn2 .vcol.m{border-left-color:var(--brown);order:3}
+  .venn2 .vtop{text-align:left}
+  .venn2 .vboth{min-height:90px}
+}
+@media (max-width:700px){ .vref{grid-template-columns:1fr} }
