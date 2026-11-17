@@ -372,3 +372,24 @@ body.screen .masthead{display:none}
 .fw .burst{position:absolute;width:230px;height:230px;margin:-115px 0 0 -115px;opacity:0;transform:scale(.2);animation:fwpop 1.8s ease-out forwards}
 @keyframes fwpop{0%{opacity:0;transform:scale(.2)}20%{opacity:1}70%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.15) translateY(14px)}}
 @media (prefers-reduced-motion:reduce){ .fw .burst{animation-duration:.01s} }
+
+/* 第四話：古今時間軸 */
+.tl{position:relative;margin:12px 0 6px;padding-left:4px}
+.tl-end{font-family:var(--serif);font-size:30px;font-weight:700;color:var(--brown);width:56px;text-align:center;line-height:1.2;letter-spacing:.1em}
+.tl-end:first-child{color:var(--longan,#6e3f2a)}
+.tl-list{position:relative;margin:4px 0}
+.tl-list::before{content:"";position:absolute;left:27px;top:-6px;bottom:-6px;border-left:3px solid var(--ink);opacity:.55}
+.tl-list li{grid-template-columns:56px 10em 1fr auto;border-bottom:0;padding:8px 0}
+.tl-list li .tl-dot{width:15px;height:15px;border-radius:50%;background:var(--paper);border:2.5px solid var(--brick);justify-self:center;position:relative;z-index:1}
+.tl-list li .tl-era{font-family:var(--hand);font-size:15px;color:var(--brick);line-height:1.3}
+.tl-list li .slip{background:var(--paper);font-size:16.5px}
+.tl:not(.fixed) .tl-list li{grid-template-columns:56px 1fr auto} .tl:not(.fixed) .tl-era{display:none}
+.tl.fixed .tl-list li .tl-dot{background:var(--brick)}
+.aquote{margin:4px 0 12px;padding:10px 16px;border-left:3px solid var(--brick);font-family:var(--serif);font-size:19px;background:rgba(255,250,240,.6)}
+.aquote span{display:block;font-family:var(--hand);font-size:13.5px;color:var(--muted);margin-top:4px}
+@media (max-width:700px){
+  .tl-end{width:40px;font-size:24px} .tl-list::before{left:19px}
+  .tl-list li,.tl:not(.fixed) .tl-list li{grid-template-columns:40px 1fr auto}
+  .tl.fixed .tl-list li{grid-template-columns:40px 1fr} .tl.fixed .tl-era{grid-column:2;grid-row:1} .tl.fixed .tl-list li .slip{grid-column:2}
+  .tl.fixed .tl-list li .tl-dot{grid-row:1/3}
+}

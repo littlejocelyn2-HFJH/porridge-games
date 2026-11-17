@@ -6,9 +6,9 @@
 <title>以粥養生・閱讀小誌</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
-<link rel="stylesheet" href="style.css?v=16">
+<link rel="stylesheet" href="style.css?v=18">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=14"></script>
+<script src="content.js?v=15"></script>
 <script src="art.js?v=4"></script>
 </head>
 <body>
@@ -289,12 +289,21 @@ function renderOrder(no){
   const ids = c.cards.map(k => k.id);
   if(!l.order || l.order.length !== ids.length || l.order.some(id => !ids.includes(id))) l.order = ids.slice(); // 題目改過時重新排
   const byId = {}; c.cards.forEach(k => byId[k.id] = k);
+  if(c.timeline){
+    const fixed = l.cardsDone, N = l.order.length;
+    if(fixed && !l.tlref && !l.tlBusy && API){ l.tlBusy = true; api({ action:"check", set:"c" + no + "tl", written:{} }).then(r => { l.tlBusy = false; l.tlref = r.ok && r.ref ? r.ref : {}; saveLocal(); if(curNo === no) renderOrder(no); }).catch(() => { l.tlBusy = false; }); }
+    const tone = i => { const t = N > 1 ? i / (N - 1) : 0, a = [232, 218, 188], b = [255, 251, 242]; return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * t)).join(",")})`; };
+    w.innerHTML = `${fixed ? `<div class="kicker" style="margin-top:6px">正確的時間軸</div>` : `<p class="small muted">由上到下，從最古老排到今天。可以拖拉，或按 ▲▼ 移動。</p>`}
+      <div class="tl ${fixed ? "fixed" : ""}"><div class="tl-end">古</div><ol class="order tl-list" id="olist">` + l.order.map((id, i) => `<li data-li="${id}" style="--paper:${tone(i)}"><span class="tl-dot"></span>
+        <span class="tl-era">${fixed ? esc((l.tlref || {})[id] || "") : ""}</span>${slipHTML(byId[id], l, no)}
+        <span class="mv">${fixed ? "" : `<button data-up="${i}" aria-label="往上">▲</button><button data-dn="${i}" aria-label="往下">▼</button>`}</span></li>`).join("") + `</ol><div class="tl-end">今</div></div>`;
+  } else
   w.innerHTML = `<ol class="order" id="olist">` + l.order.map((id, i) => `<li data-li="${id}"><span class="n">${i+1}</span>${slipHTML(byId[id], l, no)}
      <span class="mv">${l.done ? "" : `<button data-up="${i}" aria-label="往上">▲</button><button data-dn="${i}" aria-label="往下">▼</button>`}</span></li>`).join("") + `</ol>`;
   const move = (i, j) => { if(j < 0 || j >= l.order.length) return; const a = l.order.slice(); [a[i], a[j]] = [a[j], a[i]]; l.order = a; l.notes = {}; saveLocal(); renderOrder(no); };
   w.querySelectorAll("[data-up]").forEach(b => b.onclick = () => move(+b.dataset.up, +b.dataset.up - 1));
   w.querySelectorAll("[data-dn]").forEach(b => b.onclick = () => move(+b.dataset.dn, +b.dataset.dn + 1));
-  if(!l.done) bindDrag(w, {
+  if(!l.done && !(c.timeline && l.cardsDone)) bindDrag(w, {
     onTap: () => {},
     onMove: () => {},
     onDrop: (id, zone, y) => {
@@ -393,13 +402,13 @@ function writeHTML(c, l){
       (f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : "") +
       (l.wtried && !l.wref ? Object.keys(q.blanks).filter(b => l.wfb[q.k + "_" + b] === false).map(b => `<div class="ihint">✎ ${esc(q.blanks[b].hint)}</div>`).join("") : "") +
       (l.wref && l.wref[q.k] ? `<div class="rquote">✎ 參考筆記：${esc(l.wref[q.k])}</div>` : "") + `</div>`;
-    return `<div class="write"><div class="q">${i + 1}. ${esc(q.q)}</div>
+    return `<div class="write">${q.quote ? `<blockquote class="aquote">「${esc(q.quote)}」<span>── 課文最後，作者的提問</span></blockquote>` : ""}<div class="q">${i + 1}. ${esc(q.q)}</div>
       <textarea data-w="${q.k}" maxlength="300" placeholder="${esc(q.ph)}" ${ro}>${esc(l.w[q.k] || "")}</textarea>
       ${f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""}
       ${l.wtried && !l.wref && f && !f.good ? `<div class="ihint">✎ ${esc(q.hint)}</div>${q.guide ? `<div class="ihint">可以從這幾個方向想：</div><ul class="vguide">${q.guide.map(g => `<li>${esc(g)}</li>`).join("")}</ul>` : ""}` : ""}
       ${l.wref && l.wref[q.k] ? `<div class="rquote">✎ 參考筆記：${esc(l.wref[q.k])}</div>` : ""}</div>`; }).join("");
   if(l.wref && l.wref.note) h += `<p class="note">✎ ${esc(l.wref.note)}</p>`;
-  if(!l.done) h += `<div class="feedback" id="wMsg">${l.wtried && !l.wref ? "看看每一題的提醒和提示，改一改再交一次。" : ""}</div><div class="actions">${l.wref ? `<button class="btn solid" id="wDone">看完了，完成第${c.kanji}話</button>` : `<button class="btn brick" id="wBtn">${l.wtried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>`}</div>`;
+  if(!l.done) h += `<div class="feedback" id="wMsg">${l.wtried && !l.wref ? "看看每一題的提醒和提示，改一改再交一次。" : ""}</div><div class="actions">${l.wref ? `<button class="btn solid" id="wDone">看完了，完成第${c.kanji}話</button>` : `<button class="btn brick" id="wBtn">${c.openOnly ? "寫好了，交出去" : l.wtried ? "改好了，看參考筆記" : "寫好了，交給老師看看"}</button>`}</div>`;
   return h;
 }
 function bindWrite(c, l, no){
@@ -408,6 +417,18 @@ function bindWrite(c, l, no){
   const b = $("#wBtn");
   if(b) b.onclick = async () => {
     read();
+    if(c.openOnly){ // 開放作答：不判對錯、不給提示，寫完就看參考筆記
+      if(c.qs.some(q => (l.w[q.k] || "").length < 6)){ $("#wMsg").textContent = "每一題都寫一兩句，再交出去。"; return; }
+      (l.wtries = l.wtries || []).push(Object.fromEntries(c.qs.map(q => [q.k, "1"]))); l.wfb = {};
+      b.disabled = true;
+      try{
+        const r = await api({ action:"check", set:"c" + no + "w", written:l.w });
+        if(!r.ok && r.error === "沒有這一題") l.wref = { note:"（老師還沒放上參考筆記，可以先完成這一話。）" };
+        else if(!r.ok){ $("#wMsg").textContent = r.error || "讀取參考筆記失敗"; b.disabled = false; return; }
+        else l.wref = r.ref || { note:"" };
+      }catch(e){ $("#wMsg").textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
+      saveLocal(); renderAfter(no); return;
+    }
     if(c.qs.some(q => q.frame ? Object.keys(q.blanks).some(b => !(l.w[q.k + "_" + b] || "")) : (l.w[q.k] || "").length < 4)){ $("#wMsg").textContent = "每一題、每一格都寫一點，再交一次。"; return; }
     const res = {};
     c.qs.forEach(q => {
@@ -675,7 +696,7 @@ async function pushSave(){
 }
 
 /* ================= 讀書手帖（報告書） ================= */
-const SKILL = { 1:"分清楚三碗粥各是誰的、怎麼吃", 2:"用一碗粥串起人物，推論他們的心意", 3:"從照片線索推論飲食文化，說出相近的原因", 4:"判斷證據夠不夠支持一個說法" };
+const SKILL = { 1:"分清楚三碗粥各是誰的、怎麼吃", 2:"用一碗粥串起人物，推論他們的心意", 3:"從照片線索推論飲食文化，說出相近的原因", 4:"把粥放回千年的時間裡，思考作者最後的提問" };
 const LAYER = ["找訊息", "找訊息", "推論", "詮釋整合", "比較評估"];
 function gradeOf(s, no){
   const g = s.graded && s.graded[no];
@@ -902,7 +923,7 @@ function tPreview(el){
         li(c.qs.map((q, i) => `<b>${i + 1}. ${esc(q.q)}</b>${q.frame ? `<br><span class="small">${q.frame.map(line => line.think ? esc(line.think) : line.map(x => typeof x === "string" ? esc(x) : "＿＿＿").join("")).join("<br>")}</span>` : ""}<br><span class="small muted">寫錯時的提醒：${esc(q.bad)}<br>提示（交過有錯才出現）：${q.blanks ? Object.keys(q.blanks).map((b, j) => `第 ${j + 1} 格 ${esc(q.blanks[b].hint)}`).join("；") : esc(q.hint)}</span><br><span class="small">參考：${esc(ref[q.k] || "（後端還沒有這題，請貼更新代碼）")}</span>`));
     } else if(c.kind === "order"){
       const ord = set.order || [], byId = {}; c.cards.forEach(k => byId[k.id] = k);
-      h += `<p class="small"><b>正確順序</b>（學生看到的是打亂的）</p><ol>${ord.map(id => `<li>${esc(byId[id] ? byId[id].t : id)} <span class="small muted">${esc((set.para || {})[id] || "")}</span></li>`).join("")}</ol>`;
+      h += `<p class="small"><b>正確順序</b>（學生看到的是打亂的）</p><ol>${ord.map(id => `<li>${c.timeline ? `<b>${esc(((S["c" + c.no + "tl"] || {}).ref || {})[id] || "")}</b>　` : ""}${esc(byId[id] ? byId[id].t : id)} <span class="small muted">錯了才給：${esc((set.para || {})[id] || "")}</span></li>`).join("")}</ol>`;
     } else {
       h += `<div class="scroll" style="max-height:none"><table class="tb"><tr><th>紙片</th><th>正確位置</th><th>答錯時的提示</th></tr>` +
         c.cards.slice().sort((a,b) => String((set.key || {})[a.id]).localeCompare(String((set.key || {})[b.id]))).map(k => `<tr><td>${esc(k.t)}</td><td style="white-space:nowrap"><b>${esc(L[(set.key || {})[k.id]] || "？")}</b></td><td class="small">${esc((set.para || {})[k.id] || "")}</td></tr>`).join("") + `</table></div>`;
@@ -916,7 +937,7 @@ function tPreview(el){
         `</table><p class="small"><b>共通點</b>：${esc(vv.both || "（後端還沒有這題，請貼更新代碼）")}<br><span class="muted">錯了才給：${esc(IND.vhint.both)}</span></p>`;
       h += `<h3>歸納・任務二：為什麼有這樣的差異？（自己寫）</h3><div class="rquote">${esc(ww.why || "（後端還沒有這題，請貼更新代碼）")}</div>`;
     }
-    if(c.qs && c.kind !== "write") h += `<h3 style="margin-top:16px">書寫題</h3>` + li(c.qs.map((q, i) => `<b>${i + 1}. ${esc(q.q)}</b>${q.guide ? `<br><span class="small">思考方向（交過有錯才出現）：${q.guide.map(esc).join("；")}</span>` : ""}<br><span class="small muted">寫錯時的提醒：${esc(q.bad)}<br>提示（交過有錯才出現）：${esc(q.hint)}</span><br><span class="small">參考：${esc(((S["c" + c.no + "w"] || {}).ref || {})[q.k] || "（後端還沒有這題，請貼更新代碼）")}</span>`));
+    if(c.qs && c.kind !== "write") h += `<h3 style="margin-top:16px">書寫題</h3>` + li(c.qs.map((q, i) => `<b>${i + 1}. ${esc(q.q)}</b>${q.guide ? `<br><span class="small">思考方向（交過有錯才出現）：${q.guide.map(esc).join("；")}</span>` : ""}${q.quote ? `<br><span class="small">引文：「${esc(q.quote)}」</span>` : ""}<br><span class="small muted">${c.openOnly ? "開放作答：不判對錯、不給提示，交出後顯示參考筆記" : `寫錯時的提醒：${esc(q.bad)}<br>提示（交過有錯才出現）：${esc(q.hint)}`}</span><br><span class="small">參考：${esc(((S["c" + c.no + "w"] || {}).ref || {})[q.k] || "（後端還沒有這題，請貼更新代碼）")}</span>`));
     if(c.reflect) h += `<h3 style="margin-top:16px">書寫題</h3><p class="small">${esc(c.reflect.q)}${c.reflect.frame ? `<br><b>${c.reflect.frame.map(esc).join("＿＿＿")}</b>` : ""}<br><span class="muted">${c.reflect.blanks ? c.reflect.blanks.map((b, i) => `第 ${i + 1} 格（錯了才給）：${esc(b.hint)}　可接受：${esc(b.good.slice(0, 6).join("、"))}…`).join("<br>") : "提示：" + esc(c.reflect.hint)}</span></p>`;
     if(c.deep){ const d = S[c.deep.set] || {}; h += `<h3>深度思考</h3><p class="small">${esc(c.deep.q)}</p>` + li(c.deep.guide.map(esc)) + `<div class="rquote">${esc((d.ref || {}).q || "（後端還沒有這題的參考筆記，請貼更新代碼）")}</div>`; }
     h += `</div>`;
