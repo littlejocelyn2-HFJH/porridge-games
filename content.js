@@ -16,7 +16,7 @@ window.ZINE = {
       zones: [
         { id: "plain", label: "爸爸的稀飯", who: "dad", bowl: "plain", note: "白米加水煮成" },
         { id: "salty", label: "阿媽的鹹糜", who: "ama", bowl: "salty", note: "阿媽的拿手菜" },
-        { id: "sweet", label: "米糕糜", who: "mom", bowl: "sweet", note: "阿媽和媽媽都愛的甜糜" }
+        { id: "sweet", label: "米糕糜", who: ["ama","mom"], bowl: "sweet", note: "阿媽和媽媽都愛的甜糜" }
       ],
       cards: [
         { id: "k07", t: "早、晚都喝稀飯，只有中午吃一點乾飯" },

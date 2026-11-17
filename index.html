@@ -6,9 +6,9 @@
 <title>以粥養生・閱讀小誌</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=10">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=5"></script>
+<script src="content.js?v=6"></script>
 <script src="art.js?v=2"></script>
 </head>
 <body>
@@ -236,7 +236,7 @@ function renderWork(no){
   if(c.kind === "sort" && no === 1){
     h += trayHTML("紙片都放好了。");
     h += `<div class="tablezone"><div class="bowls">` + c.zones.map(z => `<div class="zone" data-zone="${z.id}">
-        <div class="who">${Art.portrait(z.who, { size:false })}</div>
+        <div class="who${Array.isArray(z.who) ? " pair" : ""}">${[].concat(z.who).map(w => Art.portrait(w, { size:false })).join("")}</div>
         <div class="bowlart">${Art.bowl(z.bowl, { size:false })}</div>
         <div class="zlabel">${esc(z.label)}</div><div class="znote">${esc(z.note)}</div>
         <div class="drop">${c.cards.filter(k => l.place[k.id] === z.id).map(k => slipHTML(k, l, no)).join("")}</div></div>`).join("") + `</div>${Art.table(700)}</div>`;

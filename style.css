@@ -100,6 +100,9 @@ hr.rule{border:0;border-top:1px solid var(--rule);margin:28px 0}
 .bowls.two{grid-template-columns:repeat(2,1fr)}
 .zone{display:flex;flex-direction:column;align-items:center;text-align:center;min-height:120px;padding:4px 2px 10px;position:relative}
 .zone .who{width:74px;margin-bottom:-6px}
+.zone .who.pair{width:140px;display:flex;justify-content:center}
+.zone .who.pair svg{width:74px;flex:0 0 74px}
+.zone .who.pair svg+svg{margin-left:-10px}
 .zone .bowlart{width:100%;max-width:170px}
 .zone .zlabel{font-family:var(--hand);font-size:19px;font-weight:700;margin-top:-6px;letter-spacing:.05em}
 .zone .znote{font-size:12px;color:var(--muted);margin-bottom:6px}
@@ -212,6 +215,9 @@ body.screen .masthead{display:none}
   .masthead{padding:12px 14px 6px;flex-wrap:wrap}
   .page{padding:16px 14px 80px}
   .zone .who{width:56px}
+  .zone .who.pair{width:104px}
+  .zone .who.pair svg{width:56px;flex:0 0 56px}
+  .zone .who.pair svg+svg{margin-left:-8px}
   .zone .zlabel{font-size:16px}
   .slip{font-size:15px;max-width:100%}
   .tray{gap:10px}
