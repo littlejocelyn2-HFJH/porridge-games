@@ -439,23 +439,8 @@ function induceHTML(l){
   const fb = (n, k) => { const f = d.fb[n] && d.fb[n][k]; return f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""; };
   let h = `<hr class="rule"><div class="kicker">歸納筆記</div>
     <h2 class="title" style="font-size:clamp(24px,5vw,32px)">從一碗粥，看見一個人的生活</h2>
-    <p class="lead">分好碗了。接下來三個小任務，一步一步往上想。每一題都用自己的話寫。</p>`;
-  // 任務一（拖拉配對）
-  d.t1p = d.t1p || {}; d.t1lock = d.t1lock || {}; d.t1note = d.t1note || {}; d.t1tries = d.t1tries || 0;
-  const cards = CH[1].induceCards, inTray1 = cards.filter(k => !d.t1p[k.id]);
-  const slip1 = k => `<div class="slip ${d.t1lock[k.id] ? "locked" : ""} ${selId === k.id ? "sel" : ""}" data-id="${k.id}">${esc(k.t)}${d.t1note[k.id] === "✓" ? `<span class="mark">✓</span>` : d.t1note[k.id] ? `<span class="why">${esc(d.t1note[k.id])}</span>` : ""}</div>`;
-  h += `<section class="task" id="t1box"><div class="tno">任務一</div><h3 class="ttl">不要只看粥，試著看見生活</h3>
-    <p class="small">再看一次上面三個碗裡的紙片。下面三張描述，說的不只是「吃什麼」，還有<b>為什麼這樣吃、什麼時候這樣吃</b>。把每張描述放到對的人旁邊。</p>
-    <details class="recapd" ${window.innerWidth >= 700 ? "open" : ""}><summary>再看一次三個碗裡的紙片</summary><div class="recap">${[["plain","爸爸的稀飯"],["salty","阿媽的鹹糜"],["sweet","米糕糜（阿媽和媽媽）"]].map(([z,t]) => `<div><b>${t}</b><ul>${placedBy(z).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div></details>
-    <div class="tray t1tray">${inTray1.map(slip1).join("") || `<span class="small muted">描述都放好了。</span>`}</div>
-    <div class="t1grid">${[["dad","爸爸"],["ama","阿媽"],["mom","媽媽"]].map(([z,n]) => {
-      const k = cards.find(c => d.t1p[c.id] === z);
-      return `<div class="t1row" data-zone="${z}"><div class="t1who">${Art.portrait(z, { width:58 })}<span>${n}</span></div><div class="drop">${k ? slip1(k) : `<span class="small muted">把描述放到這裡</span>`}</div></div>
-        ${d.ref[1] ? `<div class="iref t1ref">✎ ${esc(d.ref[1][z])}</div>` : ""}`; }).join("")}</div>
-    ${d.step === 1 && !d.ref[1] ? `<div class="feedback" id="indMsg1"></div><div class="actions"><button class="btn brick sm" id="t1check" ${inTray1.length || !API ? "disabled" : ""}>交給老師看看</button>${d.t1tries ? `<span class="small muted">第 ${d.t1tries} 次嘗試</span>` : ""}</div>` : ""}
-    ${d.step === 1 && d.ref[1] ? `<p class="note">✎ 看看每個人的描述：哪些在說「為什麼」，哪些在說「什麼時候」？</p><button class="btn solid sm" data-next="1">下一個任務 →</button>` : ""}
-  </section>`;
-  if(d.step < 2) return h;
+    <p class="lead">分好碗了。接下來兩個小任務，一步一步往上想。每一題都用自己的話寫。</p>`;
+  if(d.step < 2) d.step = 2; // 原本的任務一（描述配對）已拿掉
   // 任務二：雙圓圈比較
   d.tv = d.tv || {}; d.tw = d.tw || {};
   const vf = k => { const f = d.fb.v && d.fb.v[k]; return f ? `<div class="vfb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""; };
@@ -463,7 +448,8 @@ function induceHTML(l){
   const side = (sd) => IND.vdims.map(([k, lab]) => { const key = sd + "_" + k;
     const f = d.fb.v && d.fb.v[key];
     return `<div class="vrow"><label>${lab}${f && f.good ? ` <span class="vok">✓</span>` : ""}</label><input class="vin" data-t="v" data-k="${key}" maxlength="40" ${ro(2)} value="${esc(d.tv[key] || "")}">${f && !f.good ? vf(key) : ""}${vh(key)}</div>`; }).join("");
-  h += `<section class="task"><div class="tno">任務二</div><h3 class="ttl">兩個圓圈：爸爸的稀飯 ✕ 媽媽和阿媽的糜</h3>
+  h += `<section class="task"><div class="tno">任務一</div><h3 class="ttl">兩個圓圈：爸爸的稀飯 ✕ 媽媽和阿媽的糜</h3>
+    <details class="recapd" ${window.innerWidth >= 700 ? "open" : ""}><summary>再看一次三個碗裡的紙片</summary><div class="recap">${[["plain","爸爸的稀飯"],["salty","阿媽的鹹糜"],["sweet","米糕糜（阿媽和媽媽）"]].map(([z,t]) => `<div><b>${t}</b><ul>${placedBy(z).map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`).join("")}</div></details>
     <p class="small">課文裡，阿媽和媽媽的吃法常常寫在一起，阿媽的拿手菜也正是媽媽愛吃的，所以把她們放在同一個圈。<br>
     左右兩邊寫<b>不一樣的地方</b>（稱呼、煮法、吃法、時間季節）；中間交集寫<b>兩邊都有的</b>。</p>
     <div class="venn2">${Art.venn().replace("<svg ", '<svg preserveAspectRatio="none" ')}
@@ -481,7 +467,7 @@ function induceHTML(l){
   </section>`;
   if(d.step < 3) return h;
   // 任務三：為什麼有這樣的差異
-  h += `<section class="task"><div class="tno">任務三</div><h3 class="ttl">為什麼會有這樣的差異？</h3>
+  h += `<section class="task"><div class="tno">任務二</div><h3 class="ttl">為什麼會有這樣的差異？</h3>
     <p class="small">兩個圓圈裡，稱呼、煮法、吃法、時間都不一樣。為什麼爸爸和媽媽（阿媽）對粥會有這麼多不同？說說你的想法，並舉出課文的證據。</p>
     <div class="write" style="border-top:0;margin-top:4px">
       <textarea data-t="w" data-k="why" maxlength="300" ${ro(3)} placeholder="我認為是因為……，課文第＿段說……">${esc(d.tw.why || "")}</textarea>
@@ -521,42 +507,6 @@ function bindInduce(l){
     }catch(e){ msg.textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
     saveLocal(); renderAfter(1);
   });
-  const box = $("#t1box");
-  if(box && d.step === 1 && !d.ref[1]){
-    const drop1 = (id, zone) => {
-      if(d.t1lock[id]) return;
-      if(zone && zone !== "tray"){
-        const occ = Object.keys(d.t1p).find(k => d.t1p[k] === zone);
-        if(occ && d.t1lock[occ]) return;
-        if(occ) delete d.t1p[occ];
-        d.t1p[id] = zone; delete d.t1note[id];
-      } else if(zone === "tray") delete d.t1p[id];
-      selId = null; saveLocal(); renderAfter(1);
-    };
-    bindDrag(box, {
-      onTap: id => {
-        if(selId && selId !== id && d.t1p[id]){ const pick = selId; selId = null; return drop1(pick, d.t1p[id]); }
-        if(d.t1p[id] && !d.t1lock[id]){ delete d.t1p[id]; selId = null; saveLocal(); return renderAfter(1); }
-        selId = selId === id ? null : id; renderAfter(1);
-      },
-      onDrop: drop1
-    });
-    const ck = $("#t1check");
-    if(ck) ck.onclick = async () => {
-      d.t1tries++; ck.disabled = true; $("#indMsg1").textContent = "老師正在批改……";
-      let r; try{ r = await api({ action:"check", set:"c1t1", placements:d.t1p, tryNo:d.t1tries }); }catch(e){ r = { ok:false, error:"網路好像斷了，再按一次。" }; }
-      if(!r.ok){ d.t1tries--; $("#indMsg1").textContent = r.error || "批改失敗"; ck.disabled = false; return; }
-      if(d.t1tries === 1) d.t1first = Object.values(r.results).filter(Boolean).length;
-      Object.keys(r.results).forEach(id => {
-        if(r.results[id]){ d.t1lock[id] = true; d.t1note[id] = "✓"; }
-        else if(r.reveal && r.reveal[id]){ d.t1p[id] = r.reveal[id]; d.t1lock[id] = true; d.t1note[id] = `答案在${r.hints[id]}`; }
-        else { delete d.t1p[id]; d.t1note[id] = `再看看${r.hints[id]}`; }
-      });
-      if(r.ref){ d.ref[1] = r.ref; const nm = {}; CH[1].induceCards.forEach(c => nm[c.id] = c.t); d.t1 = { dad:"", ama:"", mom:"", tries:String(d.t1tries) }; Object.keys(d.t1p).forEach(id => d.t1[d.t1p[id]] = nm[id]); }
-      saveLocal(); renderAfter(1);
-      if(r.allRight) stamp(d.t1tries === 1 ? "好" : "很好");
-    };
-  }
   document.querySelectorAll("[data-next]").forEach(b => b.onclick = () => { read(); d.step = Number(b.dataset.next) + 1; saveLocal(); renderAfter(1); });
   const dn = $("#indDone"); if(dn) dn.onclick = () => { read(); d.done = true; l.vennDone = true; finishLevel(1); renderAfter(1); };
 }
@@ -608,7 +558,6 @@ function textsOf(no, l){
     if(l.fill) t["填空（甜鹹不拘）"] = l.fill;
     const d = l.ind;
     if(d){
-      if(d.t1 && d.t1.tries) t["任務一 配對"] = `嘗試 ${d.t1.tries} 次`;
       IND.vdims.forEach(([k, lab]) => { if(d.tv && d.tv["a_" + k]) t["雙圓圈 爸爸・" + lab] = d.tv["a_" + k]; if(d.tv && d.tv["b_" + k]) t["雙圓圈 媽媽阿媽・" + lab] = d.tv["b_" + k]; });
       if(d.tv && d.tv.both) t["雙圓圈 交集"] = d.tv.both;
       if(d.tw && d.tw.why) t["為什麼有差異"] = d.tw.why;
@@ -854,15 +803,13 @@ function tPreview(el){
         c.cards.slice().sort((a,b) => String((set.key || {})[a.id]).localeCompare(String((set.key || {})[b.id]))).map(k => `<tr><td>${esc(k.t)}</td><td style="white-space:nowrap"><b>${esc(L[(set.key || {})[k.id]] || "？")}</b></td><td class="small">${esc((set.para || {})[k.id] || "")}</td></tr>`).join("") + `</table></div>`;
     }
     if(c.no === 1){
-      const f = S.c1fill || {}, t1 = S.c1t1 || {}, who = { dad:"爸爸", ama:"阿媽", mom:"媽媽" };
+      const f = S.c1fill || {};
       h += `<h3 style="margin-top:16px">填空</h3><p class="small">${esc(c.fill.before)}＿＿${esc(c.fill.after)}　答案：<b>${esc((f.accept || []).join("／"))}</b></p>`;
-      h += `<h3>歸納・任務一：描述紙片 → 人物（拖拉）</h3>` + li(c.induceCards.map(k => `${esc(k.t)} → <b>${esc(who[(t1.key || {})[k.id]] || "？")}</b>`)) +
-        `<p class="small muted">參考說明：</p>` + li(Object.keys(who).map(k => `${who[k]}：${esc((t1.ref || {})[k] || "")}`));
       const vv = (S.c1venn || {}).ref || {}, ww = (S.c1why || {}).ref || {};
-      h += `<h3>歸納・任務二：雙圓圈（爸爸 ✕ 媽媽和阿媽，自己寫）</h3><table class="tb"><tr><th>項目</th><th>爸爸的稀飯</th><th>媽媽和阿媽的糜</th></tr>` +
+      h += `<h3>歸納・任務一：雙圓圈（爸爸 ✕ 媽媽和阿媽，自己寫）</h3><table class="tb"><tr><th>項目</th><th>爸爸的稀飯</th><th>媽媽和阿媽的糜</th></tr>` +
         IND.vdims.map(([k,lab]) => `<tr><td>${lab}</td><td class="small">${esc(vv["a_" + k] || "")}<br><span class="muted">錯了才給：${esc(IND.vhint["a_" + k])}</span></td><td class="small">${esc(vv["b_" + k] || "")}<br><span class="muted">錯了才給：${esc(IND.vhint["b_" + k])}</span></td></tr>`).join("") +
         `</table><p class="small"><b>交集</b>：${esc(vv.both || "（後端還沒有這題，請貼更新代碼）")}<br><span class="muted">錯了才給：${esc(IND.vhint.both)}</span></p>`;
-      h += `<h3>歸納・任務三：為什麼有這樣的差異？（自己寫）</h3><div class="rquote">${esc(ww.why || "（後端還沒有這題，請貼更新代碼）")}</div>`;
+      h += `<h3>歸納・任務二：為什麼有這樣的差異？（自己寫）</h3><div class="rquote">${esc(ww.why || "（後端還沒有這題，請貼更新代碼）")}</div>`;
     }
     if(c.reflect) h += `<h3 style="margin-top:16px">書寫題</h3><p class="small">${esc(c.reflect.q)}<br><span class="muted">提示：${esc(c.reflect.hint)}</span></p>`;
     if(c.deep){ const d = S[c.deep.set] || {}; h += `<h3>深度思考</h3><p class="small">${esc(c.deep.q)}</p>` + li(c.deep.guide.map(esc)) + `<div class="rquote">${esc((d.ref || {}).q || "（後端還沒有這題的參考筆記，請貼更新代碼）")}</div>`; }
