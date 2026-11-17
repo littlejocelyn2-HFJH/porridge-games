@@ -477,8 +477,9 @@ function bindInduce(l){
     b.disabled = true;
     try{
       const r = await api({ action:"check", set:"c1t" + n, written:w });
-      if(!r.ok){ msg.textContent = r.error || "讀取參考筆記失敗"; b.disabled = false; return; }
-      d.ref[n] = r.ref;
+      if(!r.ok && r.error === "沒有這一題") d.ref[n] = { note:"（老師還沒放上這題的參考筆記，可以先繼續。）" };
+      else if(!r.ok){ msg.textContent = r.error || "讀取參考筆記失敗"; b.disabled = false; return; }
+      else d.ref[n] = r.ref;
     }catch(e){ msg.textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
     saveLocal(); renderAfter(1);
   });
@@ -555,8 +556,9 @@ function bindDeep(c, l, no){
     b.disabled = true;
     try{
       const r = await api({ action:"check", set:c.deep.set, written:{ q:l.deep } });
-      if(!r.ok){ $("#deepMsg").textContent = r.error || "讀取參考筆記失敗"; b.disabled = false; return; }
-      l.deepRef = r.ref && r.ref.q || "（老師還沒設定這題的參考筆記）";
+      if(!r.ok && r.error === "沒有這一題") l.deepRef = "（老師還沒放上這題的參考筆記。你可以先完成這一話，之後再回來看看。）";
+      else if(!r.ok){ $("#deepMsg").textContent = r.error || "讀取參考筆記失敗"; b.disabled = false; return; }
+      else l.deepRef = r.ref && r.ref.q || "（老師還沒設定這題的參考筆記）";
     }catch(e){ $("#deepMsg").textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
     saveLocal(); renderAfter(no);
   };
