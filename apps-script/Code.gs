@@ -15,7 +15,7 @@ const DATA_HEADERS = ['key', '班級', '座號', '姓名', '前測層級', '練�
 const LOG_HEADERS = ['開始時間', '班級', '座號', '姓名', '前測層級', '模式', '完成話數',
   '第一話 一次就對', '第一話 嘗試', '第二話 一次就對', '第二話 嘗試', '第三話 一次就對', '第三話 嘗試', '第四話 一次就對', '第四話 嘗試',
   '總用時(秒)', '第一話填空', '第二話想法', '第三話一句話', '第四話想法', 'sessionId',
-  '雙圓圈：只有爸爸', '雙圓圈：兩邊都有', '雙圓圈：只有阿媽和媽媽'];
+  '雙圓圈：爸爸那邊', '雙圓圈：一樣的地方', '雙圓圈：媽媽和阿媽那邊', '雙圓圈：歸納'];
 const LOG_ID_COL = 21; // sessionId 所在欄（固定）
 
 function doGet() { return out({ ok: true, msg: '〈以粥養生〉閱讀小誌後端運作中。這是後端網址，請貼到 config.js。', answers: typeof ANSWERS !== 'undefined' }); }
@@ -124,7 +124,7 @@ function checkAction_(req) {
   const res = { ok: true, results: {}, hints: {} };
   if (lv === 1 && req.vennRef) {
     const v = req.venn || {};
-    if (!str_(v.a, 300) || !str_(v.both, 300) || !str_(v.b, 300)) return { ok: false, error: '三個地方都寫一點，再看參考筆記' };
+    if (!str_(v.a, 300) || !str_(v.both, 300) || !str_(v.b, 300) || !str_(v.sum, 300)) return { ok: false, error: '三個圈圈和最後一句都寫一點，再看參考筆記' };
     return { ok: true, vennRef: ANSWERS[1].venn || null };
   }
   if (lv === 1 && req.fillOnly) {
@@ -196,7 +196,7 @@ function saveAction_(req) {
     const g = grade_(lv, { tries: tries });
     clean.levels[lv] = { tries: tries, dur: Math.max(0, Math.min(36000, Math.round(Number(r.dur) || 0))), done: !!r.done, hints: Math.min(99, Number(r.hints) || 0),
       fill: str_(r.fill, 20), reflect: str_(r.reflect, 600), g: g };
-    if (lv === 1 && r.venn) clean.levels[1].venn = { a: str_(r.venn.a, 300), both: str_(r.venn.both, 300), b: str_(r.venn.b, 300) };
+    if (lv === 1 && r.venn) clean.levels[1].venn = { a: str_(r.venn.a, 300), both: str_(r.venn.both, 300), b: str_(r.venn.b, 300), sum: str_(r.venn.sum, 300) };
   });
   if (exist) sessions = sessions.map(function (x) { return x.id === sid ? clean : x; });
   else sessions.push(clean);
@@ -218,7 +218,7 @@ function logUpsert_(st, s) {
   const row = [twTime_(s.start || s.t), st.cls, st.seat, safe_(st.name), s.pretest == null ? '' : String(s.pretest), modeName, String(done),
     cell(1, 'first'), cell(1, 'tries'), cell(2, 'first'), cell(2, 'tries'), cell(3, 'first'), cell(3, 'tries'), cell(4, 'first'), cell(4, 'tries'),
     String(dur), safe_(L[1] ? L[1].fill : ''), safe_(L[2] ? L[2].reflect : ''), safe_(L[3] ? L[3].reflect : ''), safe_(L[4] ? L[4].reflect : ''), s.id,
-    safe_(L[1] && L[1].venn ? L[1].venn.a : ''), safe_(L[1] && L[1].venn ? L[1].venn.both : ''), safe_(L[1] && L[1].venn ? L[1].venn.b : '')];
+    safe_(L[1] && L[1].venn ? L[1].venn.a : ''), safe_(L[1] && L[1].venn ? L[1].venn.both : ''), safe_(L[1] && L[1].venn ? L[1].venn.b : ''), safe_(L[1] && L[1].venn ? L[1].venn.sum : '')];
   const last = sh.getLastRow();
   if (last >= 2) {
     const ids = sh.getRange(2, LOG_ID_COL, last - 1, 1).getValues();

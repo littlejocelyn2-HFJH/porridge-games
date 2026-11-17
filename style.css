@@ -256,3 +256,6 @@ body.screen .masthead{display:none}
   .venn .venn-svg{max-width:330px;margin:0 auto}
   .vref{grid-template-columns:1fr}
 }
+.venn .vhead{font-size:16px}
+.write .vfb{font-family:var(--hand);font-size:15px;color:var(--brick);margin-top:4px}
+.write .vfb.good{color:var(--sage-d)}
