@@ -6,10 +6,10 @@
 <title>以粥養生・閱讀小誌</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
-<link rel="stylesheet" href="style.css?v=1">
+<link rel="stylesheet" href="style.css?v=2">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=1"></script>
-<script src="art.js?v=1"></script>
+<script src="content.js?v=2"></script>
+<script src="art.js?v=2"></script>
 </head>
 <body>
 <header class="masthead noprint" id="masthead">
@@ -364,18 +364,20 @@ function renderAfter(no){
       <div class="feedback good" id="refFb">${l.refNote ? esc(l.refNote) : ""}</div>
       ${l.done ? "" : `<button class="btn sm" id="refBtn">${l.refNote ? "改好了，交出去" : "寫好了"}</button>`}</div>`;
   }
-  const finished = no === 1 ? l.fillDone : l.done;
+  if(no === 1 && l.fillDone) h += vennHTML(l);
+  const finished = no === 1 ? l.vennDone : l.done;
   if(finished){
     h += `<hr class="rule"><div class="actions">${no < 4 ? `<a class="btn solid" href="#ch${no+1}">翻到第${CH[no+1].kanji}話 →</a>` : `<a class="btn solid" href="#report">翻開我的讀書手帖 →</a>`}<a class="btn" href="#">回到目次</a></div>`;
   }
   el.innerHTML = h;
+  if(no === 1 && l.fillDone) bindVenn(l);
   const fb = $("#fillBtn");
   if(fb) fb.onclick = async () => {
     const v = $("#fillIn").value.trim(); if(!v) return;
     l.fill = v; l.fillTries = (l.fillTries || 0) + 1; fb.disabled = true;
     try{
       const r = await api({ action:"check", level:1, fillOnly:true, fill:v, tryNo:l.fillTries });
-      if(r.fillOk || r.fillReveal){ l.fillOk = !!r.fillOk; l.fillReveal = r.fillReveal; l.fillDone = true; finishLevel(1); }
+      if(r.fillOk || r.fillReveal){ l.fillOk = !!r.fillOk; l.fillReveal = r.fillReveal; l.fillDone = true; }
       else { $("#fillFb").textContent = "再看看第四段那一句。"; fb.disabled = false; }
     }catch(e){ $("#fillFb").textContent = "網路好像斷了，再按一次。"; fb.disabled = false; }
     saveLocal(); if(l.fillDone) renderAfter(1);
@@ -394,6 +396,63 @@ function renderAfter(no){
   };
 }
 
+/* 第一話：雙圓圈比較（自己寫，不用選項） */
+const VENN_HINT = {
+  a: ["稀飯", "白米", "早", "晚", "醃菜", "饅頭", "蒸包", "在來米", "秈米", "稀", "爛", "清爽", "蘇北", "乾飯"],
+  both: ["都", "粥", "愛", "喜歡", "習慣", "養生", "消化", "生病", "餵"],
+  b: ["糜", "臺語", "台語", "魚", "肉", "菜", "筍", "蚵", "香菇", "芋頭", "甜", "鹹", "中午", "點心", "消夜", "粒粒分明", "廈門", "米糕", "桂圓"]
+};
+function vennHTML(l){
+  const v = l.venn || { a:"", both:"", b:"" }, ro = l.vennDone ? "disabled" : "";
+  const fbv = k => { if(!l.vennFb) return ""; const f = l.vennFb[k]; return `<div class="vfb ${f.good ? "good" : ""}">${esc(f.t)}</div>`; };
+  let h = `<hr class="rule"><div class="kicker">觀察筆記</div>
+    <h2 class="title" style="font-size:clamp(24px,5vw,32px)">兩碗粥，哪裡一樣、哪裡不一樣？</h2>
+    <p class="lead" style="margin-bottom:6px">把剛剛分好的紙片再看一次。左邊寫「只有爸爸那邊才有的」，右邊寫「只有媽媽和阿媽那邊才有的」，中間寫「兩邊都有的」。用自己的話寫，一格寫一兩點就好。</p>
+    <ul class="vguide muted">
+      <li>兩邊怎麼「稱呼」粥？（看第三段、第四段的開頭）</li>
+      <li>米怎麼煮？加不加配料？什麼時候吃？</li>
+      <li>他們有沒有一樣的地方？（可以看第六段）</li>
+    </ul>
+    <div class="venn">
+      <div class="vhead"><span class="a">爸爸</span><span class="m">兩邊都有</span><span class="b">媽媽和阿媽</span></div>
+      ${Art.venn()}
+      <div class="vz vz-a"><label>只有爸爸</label><textarea data-v="a" maxlength="200" ${ro} placeholder="例：叫法……">${esc(v.a)}</textarea>${fbv("a")}</div>
+      <div class="vz vz-both"><label>兩邊都有</label><textarea data-v="both" maxlength="200" ${ro} placeholder="例：都……">${esc(v.both)}</textarea>${fbv("both")}</div>
+      <div class="vz vz-b"><label>只有媽媽和阿媽</label><textarea data-v="b" maxlength="200" ${ro} placeholder="例：叫法……">${esc(v.b)}</textarea>${fbv("b")}</div>
+    </div>`;
+  if(l.vennRef){
+    const R = l.vennRef, li = a => `<ul>${(a || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    h += `<p class="note">✎ 老師的參考筆記：和你寫的比一比，有沒有你沒發現的？想到了可以補寫在上面的格子裡。</p>
+      <div class="vref"><div class="a"><h4>只有爸爸</h4>${li(R.a)}</div><div class="m"><h4>兩邊都有</h4>${li(R.both)}</div><div class="b"><h4>只有媽媽和阿媽</h4>${li(R.b)}</div></div>`;
+  }
+  if(!l.vennDone) h += `<div class="feedback" id="vennMsg"></div><div class="actions">${l.vennRef ? `<button class="btn solid" id="vennDone">補寫好了，完成第一話</button>` : `<button class="btn brick" id="vennBtn">寫好了，看老師的提醒</button>`}</div>`;
+  return h;
+}
+function bindVenn(l){
+  const read = () => { l.venn = l.venn || {}; document.querySelectorAll(".venn textarea").forEach(t => l.venn[t.dataset.v] = t.value.trim()); saveLocal(); };
+  document.querySelectorAll(".venn textarea").forEach(t => t.addEventListener("input", read));
+  const vb = $("#vennBtn");
+  if(vb) vb.onclick = async () => {
+    read();
+    const v = l.venn;
+    if(!v.a || !v.both || !v.b){ $("#vennMsg").textContent = "三個地方都寫一點，再按一次。"; return; }
+    l.vennFb = {};
+    ["a","both","b"].forEach(k => {
+      const hit = VENN_HINT[k].filter(w => v[k].includes(w)).length;
+      l.vennFb[k] = hit ? { good:true, t:"✓ 有找到課文的線索" } : { good:false, t: k === "both" ? "再想想：兩邊有沒有一樣喜歡、一樣相信的事？" : "再回第三～五段找一找" };
+    });
+    vb.disabled = true;
+    try{
+      const r = await api({ action:"check", level:1, vennRef:true, venn:v });
+      if(r.ok) l.vennRef = r.vennRef || { a:[], both:[], b:[] };
+      else { $("#vennMsg").textContent = r.error || "讀取參考筆記失敗"; vb.disabled = false; return; }
+    }catch(e){ $("#vennMsg").textContent = "網路好像斷了，再按一次。"; vb.disabled = false; return; }
+    saveLocal(); renderAfter(1);
+  };
+  const vd = $("#vennDone");
+  if(vd) vd.onclick = () => { read(); l.vennDone = true; finishLevel(1); renderAfter(1); };
+}
+
 async function finishLevel(no){
   const l = L(no);
   if(!l.done){ l.dur += tOpen ? Math.round((Date.now() - tOpen) / 1000) : 0; tOpen = 0; l.done = true; }
@@ -402,7 +461,7 @@ async function finishLevel(no){
 }
 async function pushSave(){
   const levels = {};
-  Object.keys(sess.levels).forEach(k => { const l = sess.levels[k]; levels[k] = { tries:l.tries, dur:l.dur, done:!!l.done, hints:l.hints, fill:l.fill || "", reflect:l.reflect || "" }; });
+  Object.keys(sess.levels).forEach(k => { const l = sess.levels[k]; levels[k] = { tries:l.tries, dur:l.dur, done:!!l.done, hints:l.hints, fill:l.fill || "", reflect:l.reflect || "" }; if(l.venn) levels[k].venn = l.venn; });
   const payload = { action:"save", student, session:{ id:sess.id, start:sess.start, levels } };
   try{
     const r = await api(payload);
@@ -444,7 +503,11 @@ function reportHTML(s, stu, opt = {}){
     else if(p >= 4) cmp = "前測時你就很穩，這次也可以當同學的小老師，幫忙說明你是怎麼判斷的。";
     else cmp = `前測時，你停在「${LAYER[Math.min(4, p + 1)]}」這一層；這本小誌就是幫你練這一步。`;
   }
-  const quotes = Z.chapters.map(c => { const l = s.levels[c.no]; const t = c.no === 1 ? (l && l.fill ? `阿媽和媽媽都愛食糜，${l.fill}不拘。` : "") : (l && l.reflect) || ""; return t ? `<div class="small muted">第${c.kanji}話</div><div class="rquote">${esc(t)}</div>` : ""; }).join("");
+  const vq = s.levels[1] && s.levels[1].venn;
+  const vennQ = vq && (vq.a || vq.both || vq.b) ? `<div class="small muted">第一話・雙圓圈</div><div class="rquote">只有爸爸：${esc(vq.a)}
+兩邊都有：${esc(vq.both)}
+只有媽媽和阿媽：${esc(vq.b)}</div>` : "";
+  const quotes = vennQ + Z.chapters.map(c => { const l = s.levels[c.no]; const t = c.no === 1 ? (l && l.fill ? `阿媽和媽媽都愛食糜，${l.fill}不拘。` : "") : (l && l.reflect) || ""; return t ? `<div class="small muted">第${c.kanji}話</div><div class="rquote">${esc(t)}</div>` : ""; }).join("");
   return `<section class="report">
     <div class="head"><h2>讀書手帖</h2><div class="meta">${esc(stu.cls)} 班 ${esc(stu.seat)} 號　${esc(stu.name)}<br>${fmtTime(s.start)}　〈以粥養生〉閱讀小誌${s.mode === "challenge" ? `<br><span class="tag">小老師</span>` : ""}</div></div>
     ${cmp ? `<p class="note" style="margin:14px 0 4px">✎ ${esc(cmp)}</p>` : ""}
@@ -580,6 +643,9 @@ function tStudents(el, rows){
 }
 function tTexts(el, rows){
   let h = "";
+  const vs = rows.map(r => ({ r, s: firstSess(r) })).filter(x => x.s && x.s.levels[1] && x.s.levels[1].venn);
+  h += `<div class="box"><h3>第一話　雙圓圈：爸爸 vs. 媽媽和阿媽</h3>` + (vs.length ? `<div class="scroll"><table class="tb"><tr><th>座號</th><th>姓名</th><th>只有爸爸</th><th>兩邊都有</th><th>只有媽媽和阿媽</th></tr>` +
+    vs.map(({ r, s }) => { const v = s.levels[1].venn; return `<tr><td>${esc(r.seat)}</td><td>${esc(r.name)}</td><td>${esc(v.a)}</td><td>${esc(v.both)}</td><td>${esc(v.b)}</td></tr>`; }).join("") + `</table></div>` : `<p class="small muted">還沒有。</p>`) + `</div>`;
   Z.chapters.forEach(c => {
     const items = rows.map(r => ({ r, s: firstSess(r) })).filter(x => x.s && x.s.levels[c.no] && (c.no === 1 ? x.s.levels[1].fill : x.s.levels[c.no].reflect));
     h += `<div class="box"><h3>第${c.kanji}話　${c.no === 1 ? "填空：甜鹹不拘" : esc(c.reflect.q)}</h3>`;

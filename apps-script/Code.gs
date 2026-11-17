@@ -14,7 +14,9 @@ const MAX_SESSIONS = 20;
 const DATA_HEADERS = ['key', '班級', '座號', '姓名', '前測層級', '練習次數', '最後練習', 'sessionsJSON', '更新時間'];
 const LOG_HEADERS = ['開始時間', '班級', '座號', '姓名', '前測層級', '模式', '完成話數',
   '第一話 一次就對', '第一話 嘗試', '第二話 一次就對', '第二話 嘗試', '第三話 一次就對', '第三話 嘗試', '第四話 一次就對', '第四話 嘗試',
-  '總用時(秒)', '第一話填空', '第二話想法', '第三話一句話', '第四話想法', 'sessionId'];
+  '總用時(秒)', '第一話填空', '第二話想法', '第三話一句話', '第四話想法', 'sessionId',
+  '雙圓圈：只有爸爸', '雙圓圈：兩邊都有', '雙圓圈：只有阿媽和媽媽'];
+const LOG_ID_COL = 21; // sessionId 所在欄（固定）
 
 function doGet() { return out({ ok: true, msg: '〈以粥養生〉閱讀小誌後端運作中。這是後端網址，請貼到 config.js。', answers: typeof ANSWERS !== 'undefined' }); }
 
@@ -88,6 +90,8 @@ function sheet_(name, headers) {
     sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#efe4cf');
     sh.setFrozenRows(1);
     sh.getRange(1, 1, sh.getMaxRows(), headers.length).setNumberFormat('@');
+  } else if (sh.getLastColumn && sh.getLastColumn() < headers.length) {
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold').setBackground('#efe4cf');
   }
   return sh;
 }
@@ -118,6 +122,11 @@ function checkAction_(req) {
   if (!A) return { ok: false, error: '沒有這一話' };
   const tryNo = Math.max(1, Math.min(9, Number(req.tryNo) || 1));
   const res = { ok: true, results: {}, hints: {} };
+  if (lv === 1 && req.vennRef) {
+    const v = req.venn || {};
+    if (!str_(v.a, 300) || !str_(v.both, 300) || !str_(v.b, 300)) return { ok: false, error: '三個地方都寫一點，再看參考筆記' };
+    return { ok: true, vennRef: ANSWERS[1].venn || null };
+  }
   if (lv === 1 && req.fillOnly) {
     const f = str_(req.fill, 20).replace(/[、，,\s]/g, '');
     res.fillOk = A.fill.indexOf(f) >= 0 || (f.indexOf('甜') >= 0 && f.indexOf('鹹') >= 0 && f.length <= 4);
@@ -187,6 +196,7 @@ function saveAction_(req) {
     const g = grade_(lv, { tries: tries });
     clean.levels[lv] = { tries: tries, dur: Math.max(0, Math.min(36000, Math.round(Number(r.dur) || 0))), done: !!r.done, hints: Math.min(99, Number(r.hints) || 0),
       fill: str_(r.fill, 20), reflect: str_(r.reflect, 600), g: g };
+    if (lv === 1 && r.venn) clean.levels[1].venn = { a: str_(r.venn.a, 300), both: str_(r.venn.both, 300), b: str_(r.venn.b, 300) };
   });
   if (exist) sessions = sessions.map(function (x) { return x.id === sid ? clean : x; });
   else sessions.push(clean);
@@ -207,10 +217,11 @@ function logUpsert_(st, s) {
   const modeName = { support: '支持', standard: '一般', challenge: '挑戰' }[s.mode];
   const row = [twTime_(s.start || s.t), st.cls, st.seat, safe_(st.name), s.pretest == null ? '' : String(s.pretest), modeName, String(done),
     cell(1, 'first'), cell(1, 'tries'), cell(2, 'first'), cell(2, 'tries'), cell(3, 'first'), cell(3, 'tries'), cell(4, 'first'), cell(4, 'tries'),
-    String(dur), safe_(L[1] ? L[1].fill : ''), safe_(L[2] ? L[2].reflect : ''), safe_(L[3] ? L[3].reflect : ''), safe_(L[4] ? L[4].reflect : ''), s.id];
+    String(dur), safe_(L[1] ? L[1].fill : ''), safe_(L[2] ? L[2].reflect : ''), safe_(L[3] ? L[3].reflect : ''), safe_(L[4] ? L[4].reflect : ''), s.id,
+    safe_(L[1] && L[1].venn ? L[1].venn.a : ''), safe_(L[1] && L[1].venn ? L[1].venn.both : ''), safe_(L[1] && L[1].venn ? L[1].venn.b : '')];
   const last = sh.getLastRow();
   if (last >= 2) {
-    const ids = sh.getRange(2, LOG_HEADERS.length, last - 1, 1).getValues();
+    const ids = sh.getRange(2, LOG_ID_COL, last - 1, 1).getValues();
     for (let i = 0; i < ids.length; i++) if (String(ids[i][0]) === s.id) { sh.getRange(i + 2, 1, 1, row.length).setValues([row]); return; }
   }
   sh.appendRow(row);
@@ -253,7 +264,7 @@ function deleteSessionAction_(req) {
   if (!left.length) d.sh.deleteRow(rec.row);
   else { d.sh.getRange(rec.row, 6, 1, 3).setValues([[String(left.length), left[left.length - 1].t, JSON.stringify(left)]]); }
   const sh = sheet_(SHEET_LOG, LOG_HEADERS), last = sh.getLastRow();
-  if (last >= 2) { const ids = sh.getRange(2, LOG_HEADERS.length, last - 1, 1).getValues(); for (let i = ids.length - 1; i >= 0; i--) if (String(ids[i][0]) === sid) sh.deleteRow(i + 2); }
+  if (last >= 2) { const ids = sh.getRange(2, LOG_ID_COL, last - 1, 1).getValues(); for (let i = ids.length - 1; i >= 0; i--) if (String(ids[i][0]) === sid) sh.deleteRow(i + 2); }
   return { ok: true };
 }
 function setPretestAction_(req) {

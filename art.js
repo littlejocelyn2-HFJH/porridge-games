@@ -48,7 +48,7 @@
   A.ell = (cx, cy, rx, ry, o = {}) => {
     const n = Math.max(18, Math.round((rx + ry) / 3)), a0 = R() * 6.283, over = o.over == null ? .35 : o.over, pts = [];
     for(let i = 0; i <= n; i++){
-      const a = a0 + (6.283 + over) * i / n, k = 1 + J(.025);
+      const a = a0 + (6.283 + over) * i / n, k = 1 + J(o.wob == null ? .025 : o.wob);
       pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]);
     }
     return A.stroke(pts, Object.assign({ times: 2 }, o));
@@ -271,6 +271,17 @@
   A.circleMark = (o = {}) => { A.seedFor("circle" + (o.k || "")); return A.svg(100, 60, A.ell(50, 30, 46, 25, { c: o.c || C.brick, w: 2, over: .5 }), Object.assign({ cls: "circlemark", size: false }, o)); };
   A.underline = (w = 200, o = {}) => { A.seedFor("ul" + w); return A.svg(w, 10, A.curve([[2, 6], [w * .3, 4], [w * .7, 7], [w - 2, 4]], { c: o.c || C.brick, w: 2, times: 2 }), Object.assign({ cls: "ul", size: false }, o)); };
   A.leaf = (o = {}) => { A.seedFor("leaf"); let b = A.curve([[10, 40], [20, 20], [40, 8]], { c: C.sageDark, w: 1.3 }); b += A.ell(28, 22, 12, 6, { c: C.sageDark, w: 1.1, times: 1 }); b += A.scribble(ellD(28, 22, 12, 6), [16, 16, 24, 12], { c: C.sage, gap: 2, op: .5 }); return A.svg(50, 50, b, Object.assign({ label: "" }, o)); };
+
+  // 雙圓圈（文氏圖）：左＝爸爸（灰綠），右＝媽媽和阿媽（磚紅）
+  A.venn = (o = {}) => {
+    A.seedFor("venn");
+    let b = "";
+    b += A.scribble(ellD(275, 190, 225, 165), [50, 25, 450, 330], { c: "#b9c4ad", gap: 5, op: .35, ang: -30 });
+    b += A.scribble(ellD(485, 190, 225, 165), [260, 25, 450, 330], { c: "#e2b3a0", gap: 5, op: .35, ang: 30 });
+    b += A.ell(275, 190, 225, 165, { c: "#5f7055", w: 2, over: .3, wob: .006 });
+    b += A.ell(485, 190, 225, 165, { c: "#b5523b", w: 2, over: .3, wob: .006 });
+    return A.svg(760, 380, b, Object.assign({ size: false, cls: "venn-svg", label: "雙圓圈比較圖" }, o));
+  };
 
   // 依名稱固定亂數，讓同一張圖每次畫出來一樣
   A.seedFor = key => { let h = 7; for(const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 2147483647; s = h || 7; };
