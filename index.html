@@ -317,7 +317,7 @@ async function doCheck(no){
   l.tries.push(snap); saveLocal();
   $("#acts").innerHTML = `<span class="pending">老師正在用鉛筆批改……</span>`;
   let r;
-  try{ r = await api(c.kind === "order" ? { action:"check", level:no, order:snap, tryNo:l.tries.length } : { action:"check", level:no, placements:snap, tryNo:l.tries.length }); }
+  try{ r = await api(c.kind === "order" ? { action:"check", set:"c" + no, order:snap, tryNo:l.tries.length } : { action:"check", set:"c" + no, placements:snap, tryNo:l.tries.length }); }
   catch(e){ r = { ok:false, error:"網路好像斷了，請再按一次。" }; }
   if(!r.ok){ l.tries.pop(); saveLocal(); setFb(r.error || "批改失敗"); renderActs(no); return; }
   if(l.tries.length === 1) l.firstRight = Object.values(r.results).filter(Boolean).length;
@@ -376,7 +376,7 @@ function renderAfter(no){
     const v = $("#fillIn").value.trim(); if(!v) return;
     l.fill = v; l.fillTries = (l.fillTries || 0) + 1; fb.disabled = true;
     try{
-      const r = await api({ action:"check", level:1, fillOnly:true, fill:v, tryNo:l.fillTries });
+      const r = await api({ action:"check", set:"c1fill", fill:v, tryNo:l.fillTries });
       if(r.fillOk || r.fillReveal){ l.fillOk = !!r.fillOk; l.fillReveal = r.fillReveal; l.fillDone = true; }
       else { $("#fillFb").textContent = "再看看第四段那一句。"; fb.disabled = false; }
     }catch(e){ $("#fillFb").textContent = "網路好像斷了，再按一次。"; fb.disabled = false; }
@@ -470,7 +470,7 @@ function bindInduce(l){
       d.fb[3].reason = /第.{1,3}段|說|寫|因為|證據|蘇北|臺灣|台灣|廈門|生長環境|環境/.test(w.reason) ? { good:true, t:"✓ 有拿課文當證據" } : { good:false, t:"試著加上課文的證據，例如「第六段說……」" }; }
     b.disabled = true;
     try{
-      const r = await api({ action:"check", level:1, induceRef:n, written:w });
+      const r = await api({ action:"check", set:"c1t" + n, written:w });
       if(!r.ok){ msg.textContent = r.error || "讀取參考筆記失敗"; b.disabled = false; return; }
       d.ref[n] = r.ref;
     }catch(e){ msg.textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
@@ -499,7 +499,7 @@ function bindInduce(l){
     const ck = $("#t1check");
     if(ck) ck.onclick = async () => {
       d.t1tries++; ck.disabled = true; $("#indMsg1").textContent = "老師正在批改……";
-      let r; try{ r = await api({ action:"check", level:1, induceT1:true, placements:d.t1p, tryNo:d.t1tries }); }catch(e){ r = { ok:false, error:"網路好像斷了，再按一次。" }; }
+      let r; try{ r = await api({ action:"check", set:"c1t1", placements:d.t1p, tryNo:d.t1tries }); }catch(e){ r = { ok:false, error:"網路好像斷了，再按一次。" }; }
       if(!r.ok){ d.t1tries--; $("#indMsg1").textContent = r.error || "批改失敗"; ck.disabled = false; return; }
       if(d.t1tries === 1) d.t1first = Object.values(r.results).filter(Boolean).length;
       Object.keys(r.results).forEach(id => {
@@ -522,9 +522,27 @@ async function finishLevel(no){
   saveLocal(); renderMast(no);
   await pushSave();
 }
+/* 把每一話的文字回答整理成「題目：回答」，存進試算表 */
+function textsOf(no, l){
+  const t = {};
+  if(no === 1){
+    if(l.fill) t["填空（甜鹹不拘）"] = l.fill;
+    const d = l.ind;
+    if(d){
+      if(d.t1 && d.t1.tries) t["任務一 配對"] = `嘗試 ${d.t1.tries} 次`;
+      IND.t2rows.forEach(([k, txt]) => { if(d.t2 && d.t2[k]) t["任務二 " + txt.slice(0, 9) + "…"] = d.t2[k]; });
+      IND.t3.forEach(([k, a, b], i) => { if(d.t3 && d.t3[k]) t["任務三 第" + (i + 1) + "句"] = a + d.t3[k] + b; });
+      if(d.t3 && d.t3.word) t["統整詞"] = d.t3.word;
+      if(d.t3 && d.t3.reason) t["理由"] = d.t3.reason;
+    }
+  } else if(l.reflect) t["想法"] = l.reflect;
+  return t;
+}
+const textsFor = (s, no) => { const l = s.levels && s.levels[no]; if(!l) return {}; return l.texts || textsOf(no, l); };
+
 async function pushSave(){
   const levels = {};
-  Object.keys(sess.levels).forEach(k => { const l = sess.levels[k]; levels[k] = { tries:l.tries, dur:l.dur, done:!!l.done, hints:l.hints, fill:l.fill || "", reflect:l.reflect || "" }; if(l.ind) levels[k].induce = { t1:l.ind.t1, t2:l.ind.t2, t3:l.ind.t3 }; });
+  Object.keys(sess.levels).forEach(k => { const l = sess.levels[k]; levels[k] = { tries:l.tries, dur:l.dur, done:!!l.done, hints:l.hints, texts: textsOf(Number(k), l) }; });
   const payload = { action:"save", student, session:{ id:sess.id, start:sess.start, levels } };
   try{
     const r = await api(payload);
@@ -566,11 +584,9 @@ function reportHTML(s, stu, opt = {}){
     else if(p >= 4) cmp = "前測時你就很穩，這次也可以當同學的小老師，幫忙說明你是怎麼判斷的。";
     else cmp = `前測時，你停在「${LAYER[Math.min(4, p + 1)]}」這一層；這本小誌就是幫你練這一步。`;
   }
-  const iq = s.levels[1] && (s.levels[1].induce || (s.levels[1].ind && { t1:s.levels[1].ind.t1, t2:s.levels[1].ind.t2, t3:s.levels[1].ind.t3 }));
-  const vennQ = iq && iq.t3 && iq.t3.word ? `<div class="small muted">第一話・歸納筆記</div><div class="rquote">我選的統整詞：${esc(iq.t3.word)}
-${esc(iq.t3.reason || "")}
-${esc([iq.t3.s1 && "爸爸吃粥，反映出他的" + iq.t3.s1 + "。", iq.t3.s4 && "三個人雖然都吃粥，卻呈現了不同的" + iq.t3.s4 + "。"].filter(Boolean).join("\n"))}</div>` : "";
-  const quotes = vennQ + Z.chapters.map(c => { const l = s.levels[c.no]; const t = c.no === 1 ? (l && l.fill ? `阿媽和媽媽都愛食糜，${l.fill}不拘。` : "") : (l && l.reflect) || ""; return t ? `<div class="small muted">第${c.kanji}話</div><div class="rquote">${esc(t)}</div>` : ""; }).join("");
+  const pickT = { 1:["統整詞","理由","填空（甜鹹不拘）"], 2:["想法"], 3:["想法"], 4:["想法"] };
+  const quotes = Z.chapters.map(c => { const t = textsFor(s, c.no), keys = pickT[c.no].filter(k => t[k]);
+    return keys.length ? `<div class="small muted">第${c.kanji}話</div><div class="rquote">${keys.map(k => (c.no === 1 ? k + "：" : "") + esc(t[k])).join("\n")}</div>` : ""; }).join("");
   return `<section class="report">
     <div class="head"><h2>讀書手帖</h2><div class="meta">${esc(stu.cls)} 班 ${esc(stu.seat)} 號　${esc(stu.name)}<br>${fmtTime(s.start)}　〈以粥養生〉閱讀小誌${s.mode === "challenge" ? `<br><span class="tag">小老師</span>` : ""}</div></div>
     ${cmp ? `<p class="note" style="margin:14px 0 4px">✎ ${esc(cmp)}</p>` : ""}
@@ -666,7 +682,7 @@ function tItems(el, rows){
   const A = T.answers || {}, S = rows.map(firstSess).filter(Boolean);
   let h = "";
   Z.chapters.forEach(c => {
-    const ans = A[c.no]; if(!ans) return;
+    const ans = A.sets ? A.sets[(A.grade || {})[c.no]] : A[c.no]; if(!ans) return;
     const ts = S.map(s => s.levels && s.levels[c.no] && s.levels[c.no].tries && s.levels[c.no].tries[0]).filter(Boolean);
     h += `<div class="box"><h3>第${c.kanji}話　${esc(c.title)}（${ts.length} 人）</h3><div class="scroll"><table class="tb"><tr><th>紙片</th><th>正確位置</th><th>第一次放對</th><th>最常放錯到</th></tr>`;
     const zl = {}; (c.zones || []).forEach(z => zl[z.id] = z.label);
@@ -706,20 +722,16 @@ function tStudents(el, rows){
 }
 function tTexts(el, rows){
   let h = "";
-  const vs = rows.map(r => ({ r, s: firstSess(r) })).filter(x => x.s && x.s.levels[1] && x.s.levels[1].induce);
-  h += `<div class="box"><h3>第一話　歸納筆記（三個小任務）</h3>` + (vs.length ? `<div class="scroll"><table class="tb"><tr><th>座號</th><th>姓名</th><th>任務一：配對</th><th>任務二：取名字</th><th>任務三：句型</th><th>統整詞與理由</th></tr>` +
-    vs.map(({ r, s }) => { const i = s.levels[1].induce, t1 = i.t1 || {}, t2 = i.t2 || {}, t3 = i.t3 || {};
-      return `<tr><td>${esc(r.seat)}</td><td>${esc(r.name)}</td><td class="small">配對嘗試 ${esc(t1.tries || "")} 次</td><td class="small">${[t2.r1,t2.r2,t2.r3,t2.r4].map(esc).join("<br>")}</td><td class="small">${[t3.s1,t3.s2,t3.s3,t3.s4].map(esc).join("<br>")}</td><td><b>${esc(t3.word)}</b><br><span class="small">${esc(t3.reason)}</span></td></tr>`; }).join("") + `</table></div>` : `<p class="small muted">還沒有。</p>`) + `</div>`;
   Z.chapters.forEach(c => {
-    const items = rows.map(r => ({ r, s: firstSess(r) })).filter(x => x.s && x.s.levels[c.no] && (c.no === 1 ? x.s.levels[1].fill : x.s.levels[c.no].reflect));
-    h += `<div class="box"><h3>第${c.kanji}話　${c.no === 1 ? "填空：甜鹹不拘" : esc(c.reflect.q)}</h3>`;
-    if(!items.length) h += `<p class="small muted">還沒有。</p>`;
-    items.forEach(({ r, s }) => {
-      const t = c.no === 1 ? s.levels[1].fill : s.levels[c.no].reflect;
-      const hit = c.no === 1 ? 0 : c.reflect.good.filter(w => t.includes(w)).length;
-      h += `<div class="rquote"><b>${esc(r.seat)} ${esc(r.name)}</b>${c.no > 1 ? (hit >= 2 ? `<span class="tag sage">有連回課文</span>` : `<span class="tag">可再追問</span>`) : ""}\n${esc(t)}</div>`;
-    });
-    h += `</div>`;
+    const S = rows.map(r => ({ r, s: firstSess(r) })).filter(x => x.s);
+    const keys = []; S.forEach(({ s }) => Object.keys(textsFor(s, c.no)).forEach(k => { if(!keys.includes(k)) keys.push(k); }));
+    h += `<div class="box"><h3>第${c.kanji}話　${esc(c.title)}</h3>`;
+    if(!keys.length){ h += `<p class="small muted">還沒有。</p></div>`; return; }
+    if(c.no > 1) h += `<p class="small muted">題目：${esc(c.reflect.q)}</p>`;
+    h += `<div class="scroll"><table class="tb"><tr><th>座號</th><th>姓名</th>${keys.map(k => `<th>${esc(k)}</th>`).join("")}</tr>` +
+      S.map(({ r, s }) => { const t = textsFor(s, c.no); if(!Object.keys(t).length) return "";
+        const tag = c.no > 1 && t["想法"] ? (c.reflect.good.filter(w => t["想法"].includes(w)).length >= 2 ? ` <span class="tag sage">有連回課文</span>` : ` <span class="tag">可再追問</span>`) : "";
+        return `<tr><td>${esc(r.seat)}</td><td>${esc(r.name)}${tag}</td>${keys.map(k => `<td class="small">${esc(t[k] || "")}</td>`).join("")}</tr>`; }).join("") + `</table></div></div>`;
   });
   el.innerHTML = h;
 }
@@ -746,12 +758,29 @@ function tLog(el, rows){
   });
 }
 function tTools(el){
-  el.innerHTML = `<div class="box"><h3>匯入前測層級</h3>
+  el.innerHTML = `<div class="box"><h3>更新答案</h3>
+    <p class="small">目前答案版本：<b>${esc((T.answers && T.answers.version) || "（未標示）")}</b></p>
+    <p class="small">改題目時，Claude 會給您一段 <b>PZA1:</b> 開頭的代碼。貼在下面、按「更新」就生效，不用再進 Apps Script，也不用重新部署。</p>
+    <textarea id="ansIn" style="width:100%;min-height:80px;font-size:12px" placeholder="PZA1:..."></textarea>
+    <div class="actions"><button class="btn sm solid" id="ansBtn">更新答案</button><button class="textlink" id="ansReset">改回 Answers.gs 的版本</button><span class="small muted" id="ansMsg"></span></div></div>
+    <div class="box"><h3>匯入前測層級</h3>
     <p class="small">打開前測網站 → 學生診斷 →「匯出診斷表」，用記事本或 Excel 打開，整份複製貼在下面。系統會讀出每位學生的「閱讀層級」，決定他在小誌裡拿到的提示多寡。</p>
     <textarea id="preIn" style="width:100%;min-height:100px"></textarea><div class="actions"><button class="btn sm solid" id="preBtn">匯入</button><span class="small muted" id="preMsg"></span></div></div>
     <div class="box"><h3>匯入學生的紀錄代碼</h3><p class="small">學生網路斷線時，手帖頁會出現 PZ1: 開頭的代碼。</p>
     <textarea id="codeIn" style="width:100%;min-height:70px"></textarea><div class="actions"><button class="btn sm" id="codeBtn">匯入</button></div></div>
     <div class="box"><h3>清除本班資料</h3><p class="small">刪除「${esc(tCls)}」班的全部練習紀錄（兩個工作表都會刪），無法復原。</p><button class="btn sm" id="clrBtn" style="border-color:var(--brick);color:var(--brick)">清除 ${esc(tCls)} 班</button></div>`;
+  $("#ansBtn").onclick = async () => {
+    const code = $("#ansIn").value.trim(); if(!code) return;
+    $("#ansMsg").textContent = "更新中……";
+    const r = await api({ action:"setAnswers", password:SS.get("pz_pw"), code });
+    $("#ansMsg").textContent = r.ok ? `已更新：${r.version || ""}（共 ${r.sets} 題）` : r.error;
+    if(r.ok){ $("#ansIn").value = ""; setTimeout(loadTeacher, 1200); }
+  };
+  $("#ansReset").onclick = async () => {
+    if(!confirm("確定改回 Apps Script 裡 Answers.gs 的答案？")) return;
+    const r = await api({ action:"setAnswers", password:SS.get("pz_pw"), reset:true });
+    $("#ansMsg").textContent = r.ok ? "已改回 Answers.gs 的版本" : r.error; if(r.ok) setTimeout(loadTeacher, 1200);
+  };
   $("#preBtn").onclick = async () => {
     const items = [];
     $("#preIn").value.split(/\r?\n/).forEach(line => {
