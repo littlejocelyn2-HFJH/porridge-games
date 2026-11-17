@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
 <link rel="stylesheet" href="style.css?v=14">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=8"></script>
+<script src="content.js?v=9"></script>
 <script src="art.js?v=4"></script>
 </head>
 <body>
@@ -369,6 +369,12 @@ function writeHTML(c, l){
   l.w = l.w || {}; l.wfb = l.wfb || {};
   const ro = l.wref || l.done ? "disabled" : "";
   let h = c.qs.map((q, i) => { const f = l.wfb[q.k];
+    if(q.frame) return `<div class="write"><div class="q">${i + 1}. ${esc(q.q)}</div>` +
+      q.frame.map(line => line.think ? `<div class="q" style="margin-top:10px">${esc(line.think)}</div>` :
+        `<div class="q sframe">${line.map(x => typeof x === "string" ? esc(x) : `<input class="line wb" data-w="${q.k}_${x.b}" style="width:${x.w * 0.9}em;max-width:70%" maxlength="30" ${ro} value="${esc(l.w[q.k + "_" + x.b] || "")}">`).join("")}</div>`).join("") +
+      (f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : "") +
+      (l.wtried && !l.wref ? Object.keys(q.blanks).filter(b => l.wfb[q.k + "_" + b] === false).map(b => `<div class="ihint">✎ ${esc(q.blanks[b].hint)}</div>`).join("") : "") +
+      (l.wref && l.wref[q.k] ? `<div class="rquote">✎ 參考筆記：${esc(l.wref[q.k])}</div>` : "") + `</div>`;
     return `<div class="write"><div class="q">${i + 1}. ${esc(q.q)}</div>
       <textarea data-w="${q.k}" maxlength="300" placeholder="${esc(q.ph)}" ${ro}>${esc(l.w[q.k] || "")}</textarea>
       ${f ? `<div class="ifb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""}
@@ -384,9 +390,14 @@ function bindWrite(c, l, no){
   const b = $("#wBtn");
   if(b) b.onclick = async () => {
     read();
-    if(c.qs.some(q => (l.w[q.k] || "").length < 4)){ $("#wMsg").textContent = "每一題都寫一兩句，再交一次。"; return; }
+    if(c.qs.some(q => q.frame ? Object.keys(q.blanks).some(b => !(l.w[q.k + "_" + b] || "")) : (l.w[q.k] || "").length < 4)){ $("#wMsg").textContent = "每一題、每一格都寫一點，再交一次。"; return; }
     const res = {};
-    c.qs.forEach(q => { const ok = q.good.test(l.w[q.k]); res[q.k] = ok ? "1" : "0"; l.wfb[q.k] = ok ? { good:true, t:"✓ 有說到重點" } : { good:false, t:q.bad }; });
+    c.qs.forEach(q => {
+      let ok;
+      if(q.frame){ ok = true; Object.keys(q.blanks).forEach(b => { const g = q.blanks[b].good.test(l.w[q.k + "_" + b]); l.wfb[q.k + "_" + b] = g; if(!g) ok = false; });
+        l.w[q.k] = q.frame.filter(line => !line.think).map(line => line.map(x => typeof x === "string" ? x : (l.w[q.k + "_" + x.b] || "")).join("")).join(""); }
+      else ok = q.good.test(l.w[q.k]);
+      res[q.k] = ok ? "1" : "0"; l.wfb[q.k] = ok ? { good:true, t:"✓ 有說到重點" } : { good:false, t:q.bad }; });
     l.tries.push(res);
     if(l.tries.length === 1) l.firstRight = Object.values(res).filter(v => v === "1").length;
     const anyBad = Object.values(res).includes("0");
@@ -869,7 +880,7 @@ function tPreview(el){
     if(c.kind === "write"){
       const ref = set.ref || {};
       h += `<p class="small muted">畫面：左＝${esc(c.scene.left.t)}（${esc(c.scene.left.s)}）；中＝${esc(c.scene.center.t)}；右＝${esc(c.scene.right.t)}（${esc(c.scene.right.s)}），用「粥」串起來。</p>` +
-        li(c.qs.map((q, i) => `<b>${i + 1}. ${esc(q.q)}</b><br><span class="small muted">寫錯時的提醒：${esc(q.bad)}<br>提示（交過有錯才出現）：${esc(q.hint)}</span><br><span class="small">參考：${esc(ref[q.k] || "（後端還沒有這題，請貼更新代碼）")}</span>`));
+        li(c.qs.map((q, i) => `<b>${i + 1}. ${esc(q.q)}</b>${q.frame ? `<br><span class="small">${q.frame.map(line => line.think ? esc(line.think) : line.map(x => typeof x === "string" ? esc(x) : "＿＿＿").join("")).join("<br>")}</span>` : ""}<br><span class="small muted">寫錯時的提醒：${esc(q.bad)}<br>提示（交過有錯才出現）：${q.blanks ? Object.keys(q.blanks).map((b, j) => `第 ${j + 1} 格 ${esc(q.blanks[b].hint)}`).join("；") : esc(q.hint)}</span><br><span class="small">參考：${esc(ref[q.k] || "（後端還沒有這題，請貼更新代碼）")}</span>`));
     } else if(c.kind === "order"){
       const ord = set.order || [], byId = {}; c.cards.forEach(k => byId[k.id] = k);
       h += `<p class="small"><b>正確順序</b>（學生看到的是打亂的）</p><ol>${ord.map(id => `<li>${esc(byId[id] ? byId[id].t : id)} <span class="small muted">${esc((set.para || {})[id] || "")}</span></li>`).join("")}</ol>`;
