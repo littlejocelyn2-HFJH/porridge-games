@@ -6,9 +6,9 @@
 <title>以粥養生・閱讀小誌</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/400.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/lxgw-wenkai-tc@5/700.css">
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=22">
 <script src="config.js?v=2"></script>
-<script src="content.js?v=17"></script>
+<script src="content.js?v=18"></script>
 <script src="art.js?v=4"></script>
 </head>
 <body>
@@ -234,7 +234,7 @@ function renderWork(no){
     const cur = inTray[l.hand]; selId = cur.id;
     return `<div class="hand"><div class="hand-top"><span>✂ 手上的紙片</span><span>${l.hand + 1}／${inTray.length}</span></div>
       <div class="hand-row"><button class="hbtn" data-hand="-1" aria-label="上一張" ${inTray.length < 2 ? "disabled" : ""}>‹</button>${slipHTML(cur, l, no).replace('class="slip', 'class="slip inhand')}<button class="hbtn" data-hand="1" aria-label="下一張" ${inTray.length < 2 ? "disabled" : ""}>›</button></div>
-      <div class="small muted" style="text-align:center">點下面的${no === 1 ? "碗" : c.kind === "photo" ? "照片" : c.kind === "slots" ? "欄位" : "盤子"}，把紙片放進去</div></div>`;
+      <div class="small muted" style="text-align:center">點下面的${no === 1 ? "碗" : c.kind === "photo" ? "照片" : c.kind === "tline" ? "時間點" : c.kind === "slots" ? "欄位" : "盤子"}，把紙片放進去</div></div>`;
   };
   if(c.kind === "sort" && no === 1){
     h += trayHTML("紙片都放好了。");
@@ -249,6 +249,11 @@ function renderWork(no){
         <div class="zstamp">${Art.stamp(z.stamp, { width:60, c: z.id === "enough" ? "#5f7055" : "#b5523b" })}</div>
         <div class="zlabel">${esc(z.label)}</div>
         <div class="drop">${c.cards.filter(k => l.place[k.id] === z.id).map(k => slipHTML(k, l, no)).join("")}</div></div>`).join("") + `</div>`;
+  } else if(c.kind === "tline"){
+    h += trayHTML("都放好了。");
+    if(l.cardsDone && !l.tlref && !l.tlBusy && API){ l.tlBusy = true; api({ action:"check", set:"c" + no + "tl", written:{} }).then(r => { l.tlBusy = false; l.tlref = r.ok && r.ref ? r.ref : {}; saveLocal(); if(curNo === no) renderWork(no); }).catch(() => { l.tlBusy = false; }); }
+    h += `<div class="htl"><div class="htl-ax"><span class="htl-end">古</span><span class="htl-line"></span><span class="htl-end">今</span></div><div class="htl-pts">` + c.zones.map(z => { const k = c.cards.find(x => l.place[x.id] === z.id);
+      return `<div class="htl-pt zone" data-zone="${z.id}"><span class="htl-dot"></span><div class="lab">${esc(z.label)}</div>${l.cardsDone && k && l.tlref && l.tlref[k.id] ? `<div class="htl-era">${esc(l.tlref[k.id])}</div>` : ""}<div class="drop">${k ? slipHTML(k, l, no) : `<span class="small muted">放到這裡</span>`}</div></div>`; }).join("") + `</div></div>`;
   } else if(c.kind === "photo"){
     h += trayHTML("國家都放好了。");
     h += `<div class="photos">` + c.zones.map(z => { const k = c.cards.find(x => l.place[x.id] === z.id), ok = k && l.locked[k.id];
@@ -265,8 +270,8 @@ function renderWork(no){
   const this_drop = (id, zone) => {
       if(l.locked[id]) return;
       if(zone && zone !== "tray"){
-        if((c.kind === "slots" || c.kind === "photo") && Object.keys(l.place).some(k => l.place[k] === zone && l.locked[k])) return;
-        if(c.kind === "slots" || c.kind === "photo") Object.keys(l.place).forEach(k => { if(l.place[k] === zone && !l.locked[k]) delete l.place[k]; });
+        if((c.kind === "slots" || c.kind === "photo" || c.kind === "tline") && Object.keys(l.place).some(k => l.place[k] === zone && l.locked[k])) return;
+        if(c.kind === "slots" || c.kind === "photo" || c.kind === "tline") Object.keys(l.place).forEach(k => { if(l.place[k] === zone && !l.locked[k]) delete l.place[k]; });
         l.place[id] = zone; delete l.notes[id];
       } else if(zone === "tray") { delete l.place[id]; }
       selId = null; saveLocal(); renderWork(no); setFb("");

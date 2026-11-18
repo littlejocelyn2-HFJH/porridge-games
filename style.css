@@ -407,3 +407,22 @@ body.screen .masthead{display:none}
 .chk input{width:18px;height:18px;accent-color:#b5523b}
 @media (max-width:700px){ .versions{grid-template-columns:1fr} .chks{flex-direction:column} }
 .ctask .q{margin-top:8px} .ctask .sframe{line-height:2.4}
+
+/* 第四話：橫向時間軸 */
+.htl{margin:16px 0 8px}
+.htl-ax{display:flex;align-items:center;gap:10px}
+.htl-end{font-family:var(--serif);font-size:28px;font-weight:700;color:var(--brown)}
+.htl-line{flex:1;border-top:3px solid var(--ink);opacity:.55;position:relative}
+.htl-line::after{content:"";position:absolute;right:-2px;top:-8px;border-left:12px solid var(--ink);border-top:6.5px solid transparent;border-bottom:6.5px solid transparent}
+.htl-pts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:-37px 44px 0}
+.htl-pt{display:flex;flex-direction:column;align-items:center;text-align:center}
+.htl-dot{width:18px;height:18px;border-radius:50%;background:var(--paper,#f3ead6);border:3px solid var(--brick);margin-bottom:8px;position:relative;z-index:1}
+.htl-pt .lab{font-family:var(--hand);font-size:17px;color:var(--brick)}
+.htl-era{font-family:var(--hand);font-size:15px;color:var(--sage-d);margin-top:2px}
+.htl-pt .drop{width:100%;min-height:96px;margin-top:8px;border:1.5px dashed rgba(91,77,64,.35);padding:6px;display:flex;align-items:center;justify-content:center}
+.htl-pt .drop .slip{font-size:15.5px;text-align:left}
+@media (max-width:700px){
+  .htl-end{font-size:22px} .htl-pts{margin:-32px 0 0;gap:6px}
+  .htl-pt .drop{min-height:120px;padding:3px} .htl-pt .drop .slip{font-size:13.5px;padding:6px}
+  .htl-pt .lab{font-size:14px}
+}
