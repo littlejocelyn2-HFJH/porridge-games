@@ -960,8 +960,23 @@ function tItems(el, rows){
   });
   el.innerHTML = h || `<p class="muted">還沒有資料。</p>`;
 }
+function missingBox(rows){
+  const started = new Set(rows.filter(r => firstSess(r)).map(r => String(r.seat)));
+  const preSeats = Object.keys(T.pretest || {}).filter(k => k.split("|")[0] === tCls).map(k => k.split("|")[1]);
+  const all = new Set([...preSeats, ...started]); const max = Math.max(0, ...[...all].map(Number));
+  const num = a => [...a].map(Number).sort((x, y) => x - y).join("、");
+  const notStarted = preSeats.filter(x => !started.has(x));
+  const noRecord = Array.from({ length:max }, (_, i) => String(i + 1)).filter(x => !all.has(x));
+  let h = `<div class="box"><h3>缺交名單（${esc(tCls)} 班）</h3>
+    <p><b>還沒開始練習</b>（前測有做）：${notStarted.length ? `<b style="color:var(--brick)">${num(notStarted)}</b>` : "沒有"}</p>`;
+  h += `<table class="tb"><tr><th>話</th><th>還沒完成的座號（已開始練習的人）</th><th>人數</th></tr>` + Z.chapters.map(c => {
+    const miss = rows.filter(r => { const se = firstSess(r); return se && !(se.levels[c.no] && se.levels[c.no].done); }).map(r => r.seat);
+    return `<tr><td>第${c.kanji}話</td><td>${miss.length ? `<span style="color:var(--brick)">${num(miss)}</span>` : "全部完成"}</td><td>${miss.length}</td></tr>`; }).join("") + `</table>`;
+  if(noRecord.length) h += `<p class="small muted">1～${max} 號中完全沒有紀錄（前測、練習都沒有）的座號：${num(noRecord)}。可能是缺席、轉出，或座號不存在。</p>`;
+  return h + `</div>`;
+}
 function tStudents(el, rows){
-  let h = `<div class="scroll"><table class="tb"><tr><th>座號</th><th>姓名</th><th>前測</th><th>模式</th>${Z.chapters.map(c => `<th>第${c.kanji}話</th>`).join("")}<th>用時</th><th></th></tr>`;
+  let h = missingBox(rows) + `<div class="scroll"><table class="tb"><tr><th>座號</th><th>姓名</th><th>前測</th><th>模式</th>${Z.chapters.map(c => `<th>第${c.kanji}話</th>`).join("")}<th>用時</th><th></th></tr>`;
   rows.forEach(r => {
     const s = firstSess(r); if(!s) return;
     const dur = NOS.reduce((a,n) => a + (s.levels[n] ? s.levels[n].dur : 0), 0);
