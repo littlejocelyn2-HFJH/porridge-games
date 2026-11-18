@@ -634,6 +634,8 @@ function induceHTML(l){
     <h2 class="title" style="font-size:clamp(24px,5vw,32px)">從一碗粥，看見一個人的生活</h2>
     <p class="lead">分好碗了。接下來兩個小任務，一步一步往上想。每一題都用自己的話寫。</p>`;
   if(d.step < 2) d.step = 2; // 原本的任務一（描述配對）已拿掉
+  d.ref = d.ref || {}; d.fb = d.fb || {};
+  if(d.step > 2 && !d.ref.v){ d.step = 2; d.done = false; } // 舊版進度：雙圓圈還沒做完，退回雙圓圈
   // 任務二：雙圓圈比較
   d.tv = d.tv || {}; d.tw = d.tw || {};
   const vf = k => { const f = d.fb.v && d.fb.v[k]; return f ? `<div class="vfb ${f.good ? "good" : ""}">${esc(f.t)}</div>` : ""; };
