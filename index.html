@@ -886,7 +886,8 @@ async function loadTeacher(){
   renderTBody();
 }
 const tRows = () => T.rows.filter(r => r.cls === tCls).sort((a,b) => Number(a.seat) - Number(b.seat));
-const firstSess = r => (r.sessions || [])[0];
+// 用每人「最新一次」練習：昨天的舊版題目和今天的新版不能混算
+const firstSess = r => (r.sessions || []).slice().sort((a, b) => String(a.start || a.t).localeCompare(String(b.start || b.t))).at(-1);
 const bestSess = r => (r.sessions || []).slice().sort((a,b) => doneCount(b) - doneCount(a))[0];
 const doneCount = s => NOS.filter(n => s && s.levels && s.levels[n] && s.levels[n].done).length;
 const LVNAME = ["第0層 起步","第1層 擷取","第2層 推論","第3層 詮釋","第4層 評估"];
@@ -908,7 +909,7 @@ function gOf(s, n){ return s && s.levels && s.levels[n] && s.levels[n].g; }
 function tOverview(el, rows){
   const S = rows.map(r => ({ r, s: firstSess(r) })).filter(x => x.s);
   let h = `<div><div class="stat"><div class="n">${S.length}</div><div class="l">開始練習</div></div><div class="stat"><div class="n">${S.filter(x => doneCount(x.s) === NCH).length}</div><div class="l">全部讀完</div></div></div>`;
-  h += `<div class="box"><h3>各話「第一次就放對」的比例（每人第一次練習）</h3>` + Z.chapters.map(c => {
+  h += `<div class="box"><h3>各話「第一次就放對」的比例（每人最新一次練習）</h3>` + Z.chapters.map(c => {
     const gs = S.map(x => gOf(x.s, c.no)).filter(Boolean);
     const p = gs.length ? Math.round(gs.reduce((a,g) => a + g.first / g.total, 0) / gs.length * 100) : 0;
     const tries = gs.length ? (gs.reduce((a,g) => a + g.tries, 0) / gs.length).toFixed(1) : "-";
@@ -969,7 +970,7 @@ function tStudents(el, rows){
       Z.chapters.map(c => { const g = gOf(s, c.no); return `<td>${g ? `${g.first}/${g.total}<span class="small muted">（${g.tries}次）</span>` : "－"}</td>`; }).join("") +
       `<td>${fmtDur(dur)}${sus ? ` <span class="tag">過快?</span>` : ""}</td><td><button class="btn sm" data-rep="${esc(r.seat)}">手帖</button></td></tr>`;
   });
-  h += `</table></div><p class="small muted">分數以每人第一次練習計算，「a/b」是第一次就放對的張數。黃底＝某一話用時很短，只是提醒。</p><div id="repBox"></div>`;
+  h += `</table></div><p class="small muted">分數以每人最新一次練習計算（昨天舊版題目的紀錄在「練習紀錄」），「a/b」是第一次就放對的張數。黃底＝某一話用時很短，只是提醒。</p><div id="repBox"></div>`;
   el.innerHTML = h;
   el.querySelectorAll("[data-rep]").forEach(b => b.onclick = () => {
     const r = rows.find(x => x.seat === b.dataset.rep), s = firstSess(r);
