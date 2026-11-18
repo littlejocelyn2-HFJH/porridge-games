@@ -493,7 +493,7 @@ function bindWrite(c, l, no){
   if(b) b.onclick = async () => {
     read();
     if(c.openOnly){ // 開放作答：不判對錯、不給提示，寫完就看參考筆記
-      if(c.qs.some(q => (l.w[q.k] || "").length < 6)){ $("#wMsg").textContent = "每一題都寫一兩句，再交出去。"; return; }
+      if(c.qs.some(q => !(l.w[q.k] || "").trim())){ $("#wMsg").textContent = "還有題目沒寫，每一題都寫一點，再交出去。"; return; }
       (l.wtries = l.wtries || []).push(Object.fromEntries(c.qs.map(q => [q.k, "1"]))); l.wfb = {};
       b.disabled = true;
       try{
@@ -504,7 +504,7 @@ function bindWrite(c, l, no){
       }catch(e){ $("#wMsg").textContent = "網路好像斷了，再按一次。"; b.disabled = false; return; }
       saveLocal(); renderAfter(no); return;
     }
-    if(c.qs.some(q => q.frame ? Object.keys(q.blanks).some(b => !(l.w[q.k + "_" + b] || "")) : (l.w[q.k] || "").length < 4)){ $("#wMsg").textContent = "每一題、每一格都寫一點，再交一次。"; return; }
+    if(c.qs.some(q => q.frame ? Object.keys(q.blanks).some(b => !(l.w[q.k + "_" + b] || "")) : !(l.w[q.k] || "").trim())){ $("#wMsg").textContent = "還有題目或格子沒寫，每一題都寫一點，再交一次。"; return; }
     const res = {};
     c.qs.forEach(q => {
       let ok;
