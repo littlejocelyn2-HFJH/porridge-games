@@ -60,7 +60,10 @@ async function api(payload){
   if(!API) return { ok:false, local:true, error:"本機模式：還沒設定後端，無法批改" };
   const r = await fetch(API, { method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
   if(!r.ok) throw new Error("HTTP " + r.status);
-  return r.json();
+  const j = await r.json();
+  // 每交一次（批改／看參考筆記），幾秒後順便把目前寫的內容存進試算表，老師不用等學生整話做完
+  if(payload.action === "check" && typeof pushSave === "function" && sess){ clearTimeout(api._t); api._t = setTimeout(() => { pushSave().catch(() => {}); }, 3000); }
+  return j;
 }
 
 /* ================= 學生與練習紀錄 ================= */
@@ -76,7 +79,10 @@ function startPreview(no, fresh){
 function endPreview(){
   SS.del("pz_preview"); student = LS.get("pz_student", null); sess = student ? LS.get(sessKey(), null) : null; location.hash = "#scores";
 }
-const saveLocal = () => { if(sess) LS.set(sessKey(), sess); };
+let autoT = 0;
+const saveLocal = () => { if(!sess) return; LS.set(sessKey(), sess);
+  // 自動存到試算表：停手 20 秒後存一次（老師不用等學生整話做完就看得到）
+  clearTimeout(autoT); autoT = setTimeout(() => { if(typeof pushSave === "function") pushSave().catch(() => {}); }, 20000); };
 function L(no){ sess.levels[no] = sess.levels[no] || { tries:[], dur:0, hints:0, place:{}, locked:{}, notes:{}, revealed:{}, order:null, fill:"", reflect:"" }; return sess.levels[no]; }
 const chDone = no => !!(sess && sess.levels[no] && sess.levels[no].done);
 
@@ -785,7 +791,7 @@ async function pushSave(){
     if(r.ok){ sess.graded = r.graded || {}; sess.pending = null; }
     else { sess.pending = payload; if(r.error && !r.local) toast(r.error); }
   }catch(e){ sess.pending = payload; }
-  saveLocal();
+  if(sess) LS.set(sessKey(), sess); // 不用 saveLocal，避免又排一次自動存檔
 }
 
 /* ================= 讀書手帖（報告書） ================= */
@@ -890,7 +896,7 @@ function renderTBody(){
   const b = $("#tBody"); if(!b) return;
   const rows = tRows();
   if(!T.authed){
-    b.innerHTML = `<div class="box"><h3>${esc(tCls)} 班的閱讀進度</h3>` + (rows.length ? rows.map(r => `<span style="display:inline-block;margin:4px 14px 4px 0;font-family:var(--hand);font-size:17px">${esc(r.seat)} ${esc(r.name)} <span class="small muted">讀完 ${r.chapters}／4 話</span></span>`).join("") : `<p class="small muted">還沒有人開始。</p>`) + `</div>`;
+    b.innerHTML = `<div class="box"><h3>${esc(tCls)} 班的閱讀進度</h3>` + (rows.length ? rows.map(r => `<span style="display:inline-block;margin:4px 14px 4px 0;font-family:var(--hand);font-size:17px">${esc(r.seat)} ${esc(r.name)} <span class="small muted">讀完 ${r.chapters}／${NCH} 話</span></span>`).join("") : `<p class="small muted">還沒有人開始。</p>`) + `</div>`;
     return;
   }
   const tabs = [["preview","題目總覽"],["overview","全班概況"],["items","各話分析"],["students","學生"],["texts","文字回答"],["log","練習紀錄"],["tools","教師區"]];
