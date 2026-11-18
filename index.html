@@ -221,6 +221,14 @@ function renderCh(no){
 
 function renderWork(no){
   const c = CH[no], l = L(no), w = $("#work");
+  // 舊版留下的進度（題目改過）：卡片代號對不上就清掉重來，避免卡住或直接跳過
+  if(!l.done && c.cards && ["sort", "slots", "photo", "tline"].includes(c.kind)){
+    const ids = new Set(c.cards.map(k => k.id));
+    const stale = Object.keys(l.place || {}).concat(Object.keys(l.locked || {})).some(k => !ids.has(k)) ||
+      (l.tries || []).some(t => Array.isArray(t) || Object.keys(t || {}).some(k => !ids.has(k))) ||
+      (l.cardsDone && !c.cards.some(k => l.place && l.place[k.id]));
+    if(stale){ l.place = {}; l.locked = {}; l.notes = {}; l.tries = []; l.revealed = {}; l.cardsDone = false; l.tlref = null; saveLocal(); }
+  }
   if(c.kind === "order") return renderOrder(no);
   if(c.kind === "compare"){ l.cardsDone = true; w.innerHTML = versionsHTML(c); $("#acts").innerHTML = ""; return; }
   if(c.kind === "write"){ if(!l.done && l.tries.some(Array.isArray)){ l.tries = []; l.firstRight = null; } l.cardsDone = true; w.innerHTML = sceneHTML(c); $("#acts").innerHTML = ""; return; }
